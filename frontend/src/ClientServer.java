@@ -2,28 +2,27 @@ import com.sun.corba.se.impl.orbutil.ObjectWriter;
 import javafx.scene.control.Tab;
 import org.w3c.dom.Attr;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClientServer {
     private Socket clientSocket;
+    private ObjectOutputStream objectOutputStream;
     private PrintWriter printWriter;
-    private ObjectWriter objectWriter;
     private BufferedReader bufferedReader;
     private String ip;
     private int port;
 
     public ClientServer() {
-        ip = "192.168.0.104";
+        //ip = "192.168.0.104";
+        ip = "127.0.0.1";
         port = 2500;
 
         try {
             clientSocket = new Socket(ip,port);
+            objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
             printWriter = new PrintWriter(clientSocket.getOutputStream(), true);
             bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         } catch (IOException e) {
@@ -36,8 +35,8 @@ public class ClientServer {
 
         //printWriter.println("valami");
         try {
-            System.out.println(bufferedReader.readLine());
-            printWriter.print(table);
+            //System.out.println(bufferedReader.readLine());
+            objectOutputStream.writeObject(table);
         } catch (IOException e) {
             e.printStackTrace();
         }

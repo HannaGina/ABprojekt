@@ -1,7 +1,6 @@
-import java.io.Serializable;
 import java.util.List;
 
-public class Table implements Serializable {
+public class Table {
     private String name;
     private List<Attribute>attributes;
     private List<ForeignKey>foreignKeys;
@@ -17,14 +16,5 @@ public class Table implements Serializable {
         this.name = name;
         this.attributes = attributes;
         this.foreignKeys = foreignKeys;
-    }
-
-    @Override
-    public String toString() {
-        return "Table{" +
-                "name='" + name + '\'' +
-                ", attributes=" + attributes +
-                ", foreignKeys=" + foreignKeys +
-                '}';
     }
 }

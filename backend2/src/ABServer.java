@@ -1,8 +1,7 @@
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import javafx.scene.control.Tab;
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -15,6 +14,7 @@ public class ABServer {
     int port = 2500;
     BufferedReader in;
     PrintWriter out;
+    ObjectInputStream objectInputStream;
 
     public ABServer(){
         try {
@@ -22,12 +22,14 @@ public class ABServer {
             client = server.accept();
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            out.println("hello");
+            objectInputStream = new ObjectInputStream(client.getInputStream());
+            //out.println("hello");
 
-            in.read(t);
+            Table table =(Table) objectInputStream.readObject();
+            System.out.println(table);
             in.close();
 
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
 

@@ -1,6 +1,4 @@
-import java.io.Serializable;
-
-public class Attribute implements Serializable {
+public class Attribute {
     private String name;
     private String type;
     private boolean primaryKey;
@@ -17,17 +15,5 @@ public class Attribute implements Serializable {
         this.autoIncrement = autoIncrement;
         this.index = index;
         this.notNull = notNull;
-    }
-
-    @Override
-    public String toString() {
-        return "Attribute{" +
-                "name='" + name + '\'' +
-                ", type='" + type + '\'' +
-                ", primaryKey=" + primaryKey +
-                ", autoIncrement=" + autoIncrement +
-                ", index=" + index +
-                ", notNull=" + notNull +
-                '}';
     }
 }
