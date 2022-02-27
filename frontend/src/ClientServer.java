@@ -37,7 +37,7 @@ public class ClientServer {
         //printWriter.println("valami");
         try {
             System.out.println(bufferedReader.readLine());
-            printWriter.println(table);
+            printWriter.print(table);
         } catch (IOException e) {
             e.printStackTrace();
         }

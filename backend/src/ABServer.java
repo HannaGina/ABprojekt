@@ -41,7 +41,7 @@ public class ABServer {
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out.println("hello");
-            System.out.println(in.readLine());
+
             in.close();
             js = newJSON
         } catch (IOException e) {
