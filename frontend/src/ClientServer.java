@@ -23,22 +23,16 @@ public class ClientServer {
 
     public ClientServer() {
         ip = "192.168.0.104";
-        //ip = "127.0.0.1";
         port = 2500;
-        JSONParser jsonParser;
 
-        try {
+        /*try {
             clientSocket = new Socket(ip,port);
-            objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-            printWriter = new PrintWriter(clientSocket.getOutputStream(), true);
-            out = new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8);
             bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            jsonParser = new JSONParser();
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
 
-        JSONObject ja1 = new JSONObject();
+        /*JSONObject ja1 = new JSONObject();
         ja1.put("name","cnp");
         ja1.put("type","int");
         ja1.put("primaryKey","true");
@@ -62,19 +56,35 @@ public class ClientServer {
         Attribute attribute = new Attribute("cnp", "int", true, false, true, true);
         List<Attribute>attributes = new ArrayList<>();
         attributes.add(attribute);
-        Table table = new Table("szemely",attributes);
+        Table table = new Table("szemely",attributes);*/
 
         //printWriter.println("valami");
+
+    }
+
+    public String send(String message) {
         try {
-            //System.out.println(bufferedReader.readLine());
-            //objectOutputStream.writeObject(table);
-            out.write(jtable.toJSONString());
+            clientSocket = new Socket(ip,port);
+            out = new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8);
+            bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            out.write(message);
+            out.flush();
+
+            String answer = bufferedReader.readLine();
+
+            out.close();
+            bufferedReader.close();
+            return answer;
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 
     public static void main(String[] args) {
-        ClientServer clientServer = new ClientServer();
+
+        //ClientServer clientServer = new ClientServer();
+        DBFrame dbFrame = new DBFrame(new ClientServer());
     }
 }
