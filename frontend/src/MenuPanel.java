@@ -2,18 +2,27 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 
 public class MenuPanel extends JPanel {
     private JButton createDatabaseBtn;
     private DBFrame dbFrame;
     private JButton dropDbBtn;
+    private JButton createTableBtn;
+    private JButton dropTableBtn;
 
     public MenuPanel(DBFrame dbFrame) {
+        setLayout(new BoxLayout(this,BoxLayout.Y_AXIS));
+
         this.dbFrame = dbFrame;
         createDatabaseBtn = new JButton("Adatbazis letrehozasa");
-        createDatabaseBtn.setFont(new Font("Serif",Font.BOLD, 30));
+        createDatabaseBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
         dropDbBtn = new JButton("Adatbazis torlese");
-        dropDbBtn.setFont(new Font("Serif",Font.BOLD, 30));
+        dropDbBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        createTableBtn = new JButton("Tabla letrehozasa");
+        createTableBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        dropTableBtn = new JButton("Tabla torlese");
+        dropTableBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
 
         createDatabaseBtn.addMouseListener(new MouseAdapter() {
             @Override
@@ -30,7 +39,31 @@ public class MenuPanel extends JPanel {
             }
         });
 
+        createTableBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dbFrame.JumpTo("CreateTable");
+            }
+        });
+
+        dropTableBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dbFrame.JumpTo("DropTable");
+            }
+        });
+
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(createDatabaseBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(dropDbBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
+        this.add(createTableBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
+        this.add(dropTableBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        Arrays.stream(this.getComponents()).forEach(a-> {
+            a.setFont(new Font("Serif",Font.PLAIN, 30));});
     }
 }
