@@ -34,7 +34,7 @@ function dropDatabase(value){
 }
 
 function createTable(value){
-    let fname = `./databases/${value.database}/${value.table}.json`;
+    let fname = `databases/${value.database}/${value.table}/${value.table}.json`;
     let atrributeNames = value.attributes.map(a => a.name);
     let areAtrributeNamesUnique = atrributeNames.every((e, i) => atrributeNames.indexOf(e) == i);
     if(value.table === ''){
@@ -50,6 +50,17 @@ function createTable(value){
         return "Kell pontosan egy primary key!";
     }
     else if(fs.existsSync("databases/" + value.database) && !fs.existsSync(fname)){
+        value.attributes.map(e => {if(e.pk){e.index = true;}});
+        value.attributes.map(e => {if(e.ftable === '' || e.ftable === null){e.fk = false}});
+        
+        fs.mkdir(`databases/${value.database}/${value.table}`, (err) =>{
+            return "Letezik a tabla";
+        });
+        value.attributes.forEach(e => {
+            if(e.index){
+                fs.writeFileSync(`databases/${value.database}/${value.table}/${e.name}.ind`, "");
+            } 
+        });
         fs.writeFileSync(fname, JSON.stringify(value.attributes));
         return "OK";
     }
@@ -60,14 +71,26 @@ function createTable(value){
 
 function getTables(value){
     return fs.readdirSync(`databases/${value}/`, { withFileTypes: true })
-        .map(file => file.name.replace(".json", ""))
+        .map(file => file.name.replace("", ""))
 }
 
 function dropTable(value){
-    let fname = `databases/${value.database}/${value.table}.json`;
+    let fname = `databases/${value.database}/${value.table}`;
     if(fs.existsSync(fname)){
-        fs.rmSync(fname);
-        return "OK";
+        let somethingDependsOnThis = false;
+        fs.readdirSync(`databases/${value.database}`).forEach(dir =>{
+            const attributes = require(`./databases/${value.database}/${dir}/${dir}.json`)
+            if(attributes.some(a => a.fk && (a.ftable === value.table))){
+                somethingDependsOnThis = true;
+            }
+        })
+        if(somethingDependsOnThis){
+            return "Valami hivatkozik erre a tablara";
+        }
+        else{
+            fs.rmSync(fname,  { recursive: true, force: true });
+            return message;
+        }
     }
     else{
         return "A tabla nem letezik.";
@@ -75,10 +98,10 @@ function dropTable(value){
 }
 
 function getAttributesByType(value){
-    if(value.table === ''){
+    if(value.table === '' || value.table === null){
         return '';
     }
-    var attributes = require(`./databases/${value.database}/${value.table}.json`);
+    var attributes = require(`./databases/${value.database}/${value.table}/${value.table}.json`);
     return attributes.filter(a => a.type === value.type).map(a => a.name).toString()
 }
 
