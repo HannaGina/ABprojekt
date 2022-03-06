@@ -2,10 +2,7 @@ import hello.JSONObject;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.Arrays;
 
 public class DropTable extends JPanel {
@@ -42,9 +39,9 @@ public class DropTable extends JPanel {
         updateDbCombo();
         updateTableCombo();
 
-        dbCombo.addActionListener(new ActionListener() {
+        dbCombo.addItemListener(new ItemListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
+            public void itemStateChanged(ItemEvent e) {
                 updateTableCombo();
             }
         });

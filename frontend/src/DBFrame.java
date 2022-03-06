@@ -43,7 +43,7 @@ public class DBFrame extends JFrame {
                 container.add(createTable);
                 break;
             case "DropTable" :
-                dropTable.setAnswerLabel("");
+                dropTable = new DropTable(this,clientServer);
                 container.add(dropTable);
                 break;
         }
