@@ -1,1 +1,0 @@
-[{"fk":false,"ftable":"","unique":true,"name":"vscs","index":true,"pk":true,"type":"int","fattr":""},{"fk":false,"ftable":"","unique":false,"name":"vscsax","index":true,"pk":false,"type":"int","fattr":""}]

@@ -27,6 +27,7 @@ function getDatabases(){
 function dropDatabase(value){
     if(fs.existsSync(`databases/${value}`)){
         fs.rmSync(`databases/${value}`,  { recursive: true, force: true });
+        client.db(value).dropDatabase();
         return 'OK';
     }
     else{
@@ -63,6 +64,7 @@ function createTable(value){
             } 
         });
         fs.writeFileSync(fname, JSON.stringify(value.attributes));
+        client.db(value.database).createCollection(value.table);
         return "OK";
     }
     else{
@@ -93,6 +95,7 @@ function dropTable(value){
         }
         else{
             fs.rmSync(fname,  { recursive: true, force: true });
+            client.db(value.database).dropCollection(value.table);
             return "OK";
         }
     }
@@ -106,14 +109,139 @@ function getAttributesByType(value){
         return '';
     }
     var attributes = require(`./databases/${value.database}/${value.table}/${value.table}.json`);
-    return attributes.filter(a => a.type === value.type).map(a => a.name).toString()
+    return attributes.filter(a => a.type === value.type).map(a => a.name).toString();
+}
+
+function getTableValueNames(value){
+    var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
+    if(fs.existsSync(pathName)){
+        var valami ={};
+        require(pathName).forEach(v => valami[v.name]= v.type);
+        return JSON.stringify(valami);
+    }
+    else{
+        return "Nem letezik a tabla";
+    }
+}
+
+function getPrimaryKey(value){
+    var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
+    var cells = require(pathName);
+    var primary;
+    console.log(value);
+    cells.forEach(c => {if(c.pk){primary = c.name}})
+    return primary;
+}
+
+async function insertIntoTable(value) {
+    var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
+    if (fs.existsSync(pathName)) {
+        var cellTypes = {};
+        require(pathName).forEach(c => cellTypes[c.name] = c.type);
+        for (var ckey of Object.keys(value.cells)) {
+            if (parameterToType(value.cells[ckey], cellTypes[ckey]) == undefined) {
+                return `${ckey} fomatuma nem egyezik meg`;
+            }
+        }
+        var primaryKey = getPrimaryKey(value);
+        var otherValues = "";
+        Object.keys(value.cells).forEach(ckey => {if(ckey != primaryKey) otherValues += value.cells[ckey] + "#"});
+        var toInsert = {_id: value.cells[primaryKey], values: otherValues};
+        try{
+            await client.db(value.database).collection(value.table).insertOne(toInsert);
+        }
+        catch(err){
+            return "Letezik mar a primary key.";
+        }
+        return "OK";
+    }
+    else {
+        return "Nem letezik a tabla :(.";
+    }
+}
+
+function parameterToType(p, type){
+    switch(type){
+        case 'int':
+            if(parseInt(p) == p){
+                return parseInt(p);
+            }
+            else{
+                return undefined;
+            }
+        case 'float':
+            if(parseFloat(p) == p){
+                return parseInt(p);
+            }
+            else{
+                return undefined;
+            }
+        case 'string':
+            if(p.toString() !== "" && !/#/.test(p)){
+                return p.toString();
+            }
+            else{
+                return undefined;
+            }
+        case 'date':
+            if(/^\d{4}\/\d{2}\/\d{2}$/.test(p) && new Date(p) != 'Invalid Date'){
+                return p;
+            }
+            else{
+                return undefined;
+            }
+        case 'datetime':
+            if(/^\d{4}\/\d{2}\/\d{2}:\d{2}:\d{2}$/.test(p) && new Date(p) != 'Invalid Date'){
+                console.log(1 + " " + new Date(p));
+                return p;
+            }
+            else{
+                console.log(/^\d{4}\/\d{2}\/\d{2}$:\d{2}:\d{2}/.test(p));
+                return undefined;
+            }
+        case 'bit':
+            if(p === '0'){
+                return 0;
+            }
+            else if(p === '1'){
+                return 1;
+            }
+            else{
+                return undefined;
+            }
+        default:
+            return undefined;
+    }
 }
 
 
+async function getDocumentsFromTable(value){
+    var documents = await client.db(value.database).collection(value.table).find().toArray();
+    var array = [];
+    documents.forEach(d => {
+        array.push([]);
+        array[array.length - 1].push(d._id);
+        var values = d.values.split('#');
+        array[array.length - 1] = array[array.length - 1].concat(values);
+    });
+    return array;
+}
+
+function deleteDocumentsFromTable(value){
+    console.log(value);
+    value.cells.forEach(id =>{
+        client.db(value.database).collection(value.table).deleteOne({_id: id}, (err, obj) =>{
+            if(err){
+                console.log("Egy bejegyzes nem letezett.:(");
+            }
+        });
+    });
+    return "OK";
+}
 
 const server = net.createServer((socket) => {
 
-    socket.on('data', (data) =>{
+    socket.on('data', async (data) =>{
         data = JSON.parse(data.toString())
         console.log("I got a request: " + data.command)
         let answer;
@@ -139,8 +267,23 @@ const server = net.createServer((socket) => {
             case "Get Attributes By Type":
                 answer = getAttributesByType(data.value);
                 break;
+            case "Get Table Values":
+                answer = getTableValueNames(data.value);
+                break;
+            case "Insert Into Table":
+                answer = await insertIntoTable(data.value);
+                break;
+            case "Get Primary Key":
+                answer = getPrimaryKey(data.value);
+                break;
+            case "Get Documents From Table":
+                answer = await getDocumentsFromTable(data.value);
+                break;
+            case "Delete Documents From Table":
+                answer = deleteDocumentsFromTable(data.value);
+                break;        
         }
-
+        console.log(answer);
         socket.write(answer + '\n');
         socket.pipe(socket);
         socket.destroy();
@@ -156,3 +299,4 @@ server.listen(port, async () =>{
 server.on('close', () =>{
     client.close();
 })
+
