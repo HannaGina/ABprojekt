@@ -10,6 +10,8 @@ public class MenuPanel extends JPanel {
     private JButton dropDbBtn;
     private JButton createTableBtn;
     private JButton dropTableBtn;
+    private JButton insertBtn;
+    private JButton deleteBtn;
 
     public MenuPanel(DBFrame dbFrame) {
         setLayout(new BoxLayout(this,BoxLayout.Y_AXIS));
@@ -23,6 +25,10 @@ public class MenuPanel extends JPanel {
         createTableBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
         dropTableBtn = new JButton("Tabla torlese");
         dropTableBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        insertBtn = new JButton("Adatok beszurasa");
+        insertBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        deleteBtn = new JButton("Adatok torlese");
+        deleteBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
 
         createDatabaseBtn.addMouseListener(new MouseAdapter() {
             @Override
@@ -53,6 +59,21 @@ public class MenuPanel extends JPanel {
             }
         });
 
+        insertBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dbFrame.JumpTo("Insert");
+            }
+        });
+
+        deleteBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dbFrame.JumpTo("Delete");
+            }
+        });
+
+
         this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(createDatabaseBtn);
         this.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -62,8 +83,13 @@ public class MenuPanel extends JPanel {
         this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(dropTableBtn);
         this.add(Box.createRigidArea(new Dimension(0, 10)));
+        this.add(insertBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
+        this.add(deleteBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
 
         Arrays.stream(this.getComponents()).forEach(a-> {
             a.setFont(new Font("Serif",Font.PLAIN, 30));});
     }
+
 }
