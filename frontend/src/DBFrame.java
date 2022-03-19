@@ -8,6 +8,8 @@ public class DBFrame extends JFrame {
     private DropDatabase dropDatabase;
     private CreateTable createTable;
     private DropTable dropTable;
+    private Insert insert;
+    private Delete delete;
 
     public DBFrame(ClientServer cl) {
         clientServer = cl;
@@ -16,6 +18,8 @@ public class DBFrame extends JFrame {
         dropDatabase = new DropDatabase(this,clientServer);
         createTable = new CreateTable(this,clientServer);
         dropTable = new DropTable(this,clientServer);
+        insert = new Insert(this,clientServer);
+        delete = new Delete(this,clientServer);
 
         add(menuPanel);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -46,6 +50,14 @@ public class DBFrame extends JFrame {
             case "DropTable" :
                 dropTable = new DropTable(this,clientServer);
                 container.add(dropTable);
+                break;
+            case "Insert" :
+                insert = new Insert(this,clientServer);
+                container.add(insert);
+                break;
+            case "Delete" :
+                delete = new Delete(this,clientServer);
+                container.add(delete);
                 break;
         }
         container.validate();
