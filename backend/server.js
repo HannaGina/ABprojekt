@@ -76,6 +76,9 @@ function getTables(value){
 }
 
 function dropTable(value){
+    if(value.table == '' || value.table == null){
+        return "Nincs neve a tablanak";
+    }
     let fname = `databases/${value.database}/${value.table}`;
     if(fs.existsSync(fname)){
         let somethingDependsOnThis = false;
