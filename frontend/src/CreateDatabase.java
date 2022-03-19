@@ -65,4 +65,9 @@ public class CreateDatabase extends JPanel {
 
         add(mainPanel,BorderLayout.CENTER);
     }
+
+    public void doEmpty() {
+        jTextField.setText("");
+        answerLabel.setText("");
+    }
 }

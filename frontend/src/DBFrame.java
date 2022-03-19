@@ -31,6 +31,7 @@ public class DBFrame extends JFrame {
                 container.add(menuPanel);
                 break;
             case "CreateDatabase" :
+                createDatabase.doEmpty();
                 container.add(createDatabase);
                 break;
             case "DropDatabase" :
