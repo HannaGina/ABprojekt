@@ -10,6 +10,7 @@ const port = 2500;
 function createDatabase(value){
     if (!fs.existsSync(`databases/${value}`)){
         fs.mkdirSync(`databases/${value}`);
+        client.db(value).collection("temp").in;          
         return "OK";
     }
     else{
@@ -50,7 +51,7 @@ function createTable(value){
         return "Kell pontosan egy primary key!";
     }
     else if(fs.existsSync("databases/" + value.database) && !fs.existsSync(fname)){
-        value.attributes.map(e => {if(e.pk){e.index = true;}});
+        value.attributes.map(e => {if(e.pk){e.index = true; e.unique = true;}});
         value.attributes.map(e => {if(e.ftable === '' || e.ftable === null){e.fk = false}});
         
         fs.mkdir(`databases/${value.database}/${value.table}`, (err) =>{
@@ -89,7 +90,7 @@ function dropTable(value){
         }
         else{
             fs.rmSync(fname,  { recursive: true, force: true });
-            return message;
+            return "OK";
         }
     }
     else{
@@ -144,9 +145,9 @@ const server = net.createServer((socket) => {
 })
 
 
-server.listen(port, () =>{
+server.listen(port, async () =>{
     console.log(`Server is listening on http://localhost:${port}`)
-    client.connect()
+    await client.connect();
 })
 
 server.on('close', () =>{
