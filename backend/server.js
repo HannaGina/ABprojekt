@@ -1,8 +1,7 @@
 const net = require('net')
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://abuser:oobS68tBrelJayOp@abprojekt.4qafu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
-
+const uri = "mongodb+srv://abuser:CtquLglKDUxGQ0Su@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 const port = 2500;
@@ -293,7 +292,11 @@ const server = net.createServer((socket) => {
 
 server.listen(port, async () =>{
     console.log(`Server is listening on http://localhost:${port}`)
-    await client.connect();
+    client.connect(err =>{
+        if(err){
+            console.log(err)
+        }
+    })
 })
 
 server.on('close', () =>{
