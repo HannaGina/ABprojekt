@@ -6,7 +6,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 const uri2 = "mongodb+srv://abuser:Akhnjofxy5QEoF8P@indexcluster.niofn.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
-const indexClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+const indexClient = new MongoClient(uri2, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
 const port = 2500;
@@ -214,6 +214,9 @@ function parameterToType(p, type){
 }
 
 
+
+
+
 async function getDocumentsFromTable(value){
     var documents = await client.db(value.database).collection(value.table).find().toArray();
     var array = [];
@@ -296,7 +299,7 @@ server.listen(port, async () =>{
         if(err){
             console.log(err)
         }
-    })
+    });
     indexClient.connect(err =>{
         console.log("HELLO INDEXCLIENT");
         if(err){
