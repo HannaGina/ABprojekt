@@ -1,4 +1,6 @@
 import hello.JSONObject;
+import hello.parser.JSONParser;
+import hello.parser.ParseException;
 
 import javax.swing.*;
 import java.awt.*;
@@ -49,11 +51,41 @@ public class DropTable extends JPanel {
         dropTableBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                JSONObject mess = new JSONObject();
+                mess.put("command","Get Table Values");
+                JSONObject message2 = new JSONObject();
+                message2.put("database", dbCombo.getSelectedItem().toString());
+                message2.put("table", tableCombo.getSelectedItem().toString());
+                mess.put("value",message2);
+                JSONParser jsonParser = new JSONParser();
+                JSONObject ans = new JSONObject();
+                try {
+                    ans =  (JSONObject) jsonParser.parse(clientServer.send(mess.toJSONString()));
+                } catch (ParseException f) {
+                    //System.out.println(-1);
+                    f.printStackTrace();
+                }
+
+                JSONObject messageKey = new JSONObject();
+                messageKey.put("command","Get Primary Key");
+                messageKey.put("value", message2);
+                String answKey = clientServer.send(messageKey.toJSONString());
+
+
+                String order=new String();
+
+                for(Object a : ans.keySet()) {
+                    if (!a.equals(answKey)) {
+                        order += a.toString() + ",";
+                    }
+                }
+
                 JSONObject message = new JSONObject();
                 message.put("command","Drop Table");
                 JSONObject miniMessage = new JSONObject();
                 miniMessage.put("database",dbCombo.getSelectedItem().toString());
                 miniMessage.put("table",tableCombo.getSelectedItem().toString());
+                miniMessage.put("order", order);
                 message.put("value", miniMessage);
                 answerLabel.setText(clientServer.send(message.toJSONString()));
                 updateTableCombo();

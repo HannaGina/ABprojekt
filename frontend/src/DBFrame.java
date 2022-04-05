@@ -16,10 +16,10 @@ public class DBFrame extends JFrame {
         menuPanel = new MenuPanel(this);
         createDatabase = new CreateDatabase(this,clientServer);
         dropDatabase = new DropDatabase(this,clientServer);
-        createTable = new CreateTable(this,clientServer);
-        dropTable = new DropTable(this,clientServer);
-        insert = new Insert(this,clientServer);
-        delete = new Delete(this,clientServer);
+        //createTable = new CreateTable(this,clientServer);
+        //dropTable = new DropTable(this,clientServer);
+        //insert = new Insert(this,clientServer);
+        //delete = new Delete(this,clientServer);
 
         add(menuPanel);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);

@@ -28,6 +28,7 @@ public class Delete extends JPanel {
     private JButton deleteBtn;
     private int colNumber;
     private int rowNumber;
+    private String order;
 
     public Delete(DBFrame dbFrame,ClientServer cl) {
         clientServer = cl;
@@ -88,6 +89,8 @@ public class Delete extends JPanel {
                 JSONObject message = new JSONObject();
                 message.put("database", dbCombo.getSelectedItem());
                 message.put("table", tableCombo.getSelectedItem());
+                message.put("order", order);
+
                 JSONArray array = new JSONArray();
 
                 int j=2;
@@ -157,6 +160,8 @@ public class Delete extends JPanel {
             //System.out.println(-1);
             e.printStackTrace();
         }
+        //System.out.println(ans.toString());
+
         String[] s = ans.toString().split(",");
 
         JSONObject messageKey = new JSONObject();
@@ -174,8 +179,11 @@ public class Delete extends JPanel {
         //System.out.println(datas.length);
         //System.out.println(s.length);
 
+        //for(String szo : s) System.out.println(szo);
         colNumber = s.length+1;
-        rowNumber = (datas.length+1)/(s.length+1)+1;
+        //System.out.println(s.length + " " + datas.length);
+        rowNumber = (datas.length+1)/colNumber+1;
+        //System.out.println(colNumber+" "+rowNumber);
         if(answDatas.isEmpty()) rowNumber=1;
         attrPanel.setLayout(new GridLayout(rowNumber,colNumber));
 
@@ -193,8 +201,10 @@ public class Delete extends JPanel {
         keyLabel.setHorizontalAlignment(SwingConstants.CENTER);
         attrPanel.add(keyLabel);
 
+        order=new String();
         for(Object a : ans.keySet()) {
             if(!a.equals(answKey)) {
+                order+=a.toString()+",";
                 JLabel jLabel = new JLabel(a.toString());
                 jLabel.setFont(new Font("Serif", Font.BOLD, 30));
                 jLabel.setBorder(BorderFactory.createLineBorder(Color.black));

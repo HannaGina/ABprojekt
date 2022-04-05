@@ -22,7 +22,7 @@ public class ClientServer {
     private int port;
 
     public ClientServer() {
-        ip = "192.168.0.106";
+        ip = "192.168.0.101";
         //ip = "172.30.116.211";
         port = 2500;
     }

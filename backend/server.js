@@ -148,7 +148,7 @@ async function insertIntoTable(value) {
         Object.keys(value.cells).forEach(ckey => {if(ckey != primaryKey) otherValues += value.cells[ckey] + "#"});
         var toInsert = {_id: value.cells[primaryKey], values: otherValues};
         try{
-            await client.db(value.database).collection(value.table).insertOne(toInsert);
+            await celient.db(value.database).collection(value.tabl).insertOne(toInsert);
         }
         catch(err){
             return "Letezik mar a primary key.";
@@ -238,6 +238,7 @@ function deleteDocumentsFromTable(value){
     });
     return "OK";
 }
+
 
 const server = net.createServer((socket) => {
 
