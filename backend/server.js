@@ -1,7 +1,8 @@
 const net = require('net')
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://abuser:CtquLglKDUxGQ0Su@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
+const { isAsyncFunction } = require('util/types');
+const uri = "mongodb+srv://abuser:OLb1hZPcnBK4bJEr@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
@@ -32,6 +33,7 @@ function dropDatabase(value){
     if(fs.existsSync(`databases/${value}`)){
         fs.rmSync(`databases/${value}`,  { recursive: true, force: true });
         client.db(value).dropDatabase();
+        indexClient.db(value).dropDatabase();
         return 'OK';
     }
     else{
@@ -43,6 +45,7 @@ function createTable(value){
     let fname = `databases/${value.database}/${value.table}/${value.table}.json`;
     let atrributeNames = value.attributes.map(a => a.name);
     let areAtrributeNamesUnique = atrributeNames.every((e, i) => atrributeNames.indexOf(e) == i);
+    console.log(value.attributes);
     if(value.table === ''){
         return "A tablanak kell nevet adni.";
     }
@@ -52,6 +55,9 @@ function createTable(value){
     else if(atrributeNames.some(e => e == '')){
         return "Van ures mezo.";
     }
+    else if(atrributeNames.some(e => /,/.test(e))){
+        return "Az egyik mezo vesszot tartalmaz."
+    }
     else if(value.attributes.filter(e => e.pk).length != 1){
         return "Kell pontosan egy primary key!";
     }
@@ -59,10 +65,11 @@ function createTable(value){
         value.attributes.map(e => {if(e.pk){e.index = false; e.unique = true;}});
         value.attributes.map(e => {if(e.ftable === '' || e.ftable === null){e.fk = false}});
         
-        fs.mkdir(`databases/${value.database}/${value.table}`, (err) =>{
+
+        fs.mkdirSync(`databases/${value.database}/${value.table}`, (err) =>{
             return "Letezik a tabla";
         });
-        fs.writeFileSync(fname, JSON.stringify(value.attributes));
+        fs.writeFileSync(fname, JSON.stringify(value.attributes, null, 4), { flag: 'wx' });
         client.db(value.database).createCollection(value.table);
         return "OK";
     }
@@ -76,7 +83,8 @@ function getTables(value){
         .map(file => file.name.replace("", ""))
 }
 
-function dropTable(value){
+async function dropTable(value){
+    
     if(value.table == '' || value.table == null){
         return "Nincs neve a tablanak";
     }
@@ -93,6 +101,37 @@ function dropTable(value){
             return "Valami hivatkozik erre a tablara";
         }
         else{
+            
+            console.log(value.order);
+
+            var documentsArray = await client.db(value.database).collection(value.table).find().toArray();
+            var array = [];
+            var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
+            let cells = require(pathName);
+            documentsArray.forEach(d => {
+                let cellNames = value.order.split(",");
+                let stringArray = d.values.split("#");
+                let document = {};
+                for(let i = 0; i < stringArray.length - 1; i++){
+                    document[cellNames[i]] = stringArray[i];
+                }
+
+                document[getPrimaryKey(value)] = d.id;
+
+                for(c of cells){
+                    if(c.fk){
+                        indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
+                            .updateOne({_id: document[c.name]}, {$inc : {references: -1}});
+                    }
+                }
+
+            });
+            
+            for(c of cells){
+                if(c.unique){
+                    indexClient.db(value.database).dropCollection(value.table + "." + c.name);
+                }
+            }
             fs.rmSync(fname,  { recursive: true, force: true });
             client.db(value.database).dropCollection(value.table);
             return "OK";
@@ -124,10 +163,12 @@ function getTableValueNames(value){
 }
 
 function getPrimaryKey(value){
+    if(value.table == "" || value.table == null){
+        return "";
+    }
     var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
     var cells = require(pathName);
     var primary;
-    console.log(value);
     cells.forEach(c => {if(c.pk){primary = c.name}})
     return primary;
 }
@@ -136,21 +177,87 @@ async function insertIntoTable(value) {
     var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
     if (fs.existsSync(pathName)) {
         var cellTypes = {};
+
+        //type verification
         require(pathName).forEach(c => cellTypes[c.name] = c.type);
         for (var ckey of Object.keys(value.cells)) {
             if (parameterToType(value.cells[ckey], cellTypes[ckey]) == undefined) {
                 return `${ckey} fomatuma nem egyezik meg`;
             }
         }
-        var primaryKey = getPrimaryKey(value);
-        var otherValues = "";
+
+
+        let primaryKey = getPrimaryKey(value);
+        let otherValues = "";
         Object.keys(value.cells).forEach(ckey => {if(ckey != primaryKey) otherValues += value.cells[ckey] + "#"});
-        var toInsert = {_id: value.cells[primaryKey], values: otherValues};
-        try{
-            await client.db(value.database).collection(value.table).insertOne(toInsert);
+        
+
+        //primary key verification
+        let pkOkay = (await client.db(value.database).collection(value.table)
+                                .findOne({_id: value.cells[primaryKey]})) === null;
+        cells = require(pathName);
+
+        
+        //unqiue check
+        for(c of cells){
+            if(c.unique){
+                let exists = (await indexClient.db(value.database).collection(value.table  + "." + c.name)
+                            .findOne({_id: value.cells[c.name]})) !== null;
+                if(exists){
+                    return `${c.name} unique s mar van belole egy.`;
+                }
+            }
         }
-        catch(err){
-            return "Letezik mar a primary key.";
+
+        //fkey check
+        for(c of cells){
+            if(c.fk){
+                let exists = (await indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
+                        .findOne({_id: value.cells[c.name]})) !== null;
+                if(!exists){
+                    return `${c.name} hivatkozik mas tablara, de ott nincs jelen az ertek.`;
+                }
+            }
+        }
+
+        if(!pkOkay){
+            return "A primary key letezik mar.";
+        }
+
+        //inserting into table
+        let toInsert = {_id: value.cells[primaryKey], values: otherValues};
+        client.db(value.database).collection(value.table).insertOne(toInsert);
+        
+        //inserting nito unique index files
+        cells.forEach(c => {
+            if(c.unique){
+                indexClient.db(value.database).collection(value.table  + "." + c.name)
+                    .insertOne({_id: value.cells[c.name], pk: value.cells[primaryKey], references: 0});
+            }
+        });
+        
+        //inserting into not unique index files
+        for(c of cells){
+            if(c.index && !c.unique){
+                let querry = await indexClient.db(value.database).collection(value.table + "." + c.name)
+                    .findOne({_id: value.cells[c.name]});
+                if(querry === null){
+                    indexClient.db(value.database).collection(value.table + "." + c.name)
+                        .insertOne({_id: value.cells[c.name], pks: [ value.cells[primaryKey ]]})
+                }
+                else{
+                    indexClient.db(value.database).collection(value.table + "." + c.name)
+                        .updateOne({_id: value.cells[c.name]}, {$push: {pks: value.cells[primaryKey]}})
+                }
+            }
+        }
+
+        //incrementing references in foreign table
+        for(c of cells){
+            if(c.fk){
+                indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
+                    .updateOne({_id: value.cells[c.name]}, {$inc : {references: 1}});
+            }
         }
         return "OK";
     }
@@ -191,11 +298,9 @@ function parameterToType(p, type){
             }
         case 'datetime':
             if(/^\d{4}\/\d{2}\/\d{2}:\d{2}:\d{2}$/.test(p) && new Date(p) != 'Invalid Date'){
-                console.log(1 + " " + new Date(p));
                 return p;
             }
             else{
-                console.log(/^\d{4}\/\d{2}\/\d{2}$:\d{2}:\d{2}/.test(p));
                 return undefined;
             }
         case 'bit':
@@ -214,10 +319,10 @@ function parameterToType(p, type){
 }
 
 
-
-
-
 async function getDocumentsFromTable(value){
+    if(value.table == "" || value.table == null){
+        return [];
+    }
     var documents = await client.db(value.database).collection(value.table).find().toArray();
     var array = [];
     documents.forEach(d => {
@@ -229,15 +334,76 @@ async function getDocumentsFromTable(value){
     return array;
 }
 
-function deleteDocumentsFromTable(value){
-    console.log(value);
-    value.cells.forEach(id =>{
-        client.db(value.database).collection(value.table).deleteOne({_id: id}, (err, obj) =>{
-            if(err){
-                console.log("Egy bejegyzes nem letezett.:(");
+async function deleteDocumentsFromTable(value){
+
+    let pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
+    let cells = require(pathName);
+    let nemTorolheto = [];
+    for(id of value.cells){
+        let document = {};
+        let querry = await client.db(value.database).collection(value.table)
+                    .findOne({_id : id});
+        
+        if(querry === null){
+            //nem kaptuk meg a cuccot
+            return "NEM LETEZIK:((((("
+        }
+
+
+        let i = 0;
+        let stringArray = querry.values.split("#");
+        let cellNames = value.order.split(",");
+
+        for(let i = 0; i < stringArray.length - 1; i++){
+            document[cellNames[i]] = stringArray[i];
+        }
+        document[getPrimaryKey(value)] = id;
+
+        let needsToBreak = false;
+        for(c of cells){
+            if(c.unique){
+                let ref = (await indexClient.db(value.database).collection(value.table + "." + c.name)
+                            .findOne({_id: document[c.name]})).references;
+                if(ref){
+                    nemTorolheto.push(id);
+                    needsToBreak = true;
+                    break;
+                }
             }
-        });
-    });
+        }
+
+        if(needsToBreak){
+            continue;
+        }
+
+
+        for(c of cells){
+            if(c.fk){
+                indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
+                    .updateOne({_id: document[c.name]}, {$inc : {references: -1}});
+            }
+        }
+
+        for(c of cells){
+            if(c.unique){
+                indexClient.db(value.database).collection(value.table + "." + c.name)
+                    .deleteOne({_id: document[c.name]});
+            }
+        }
+
+        client.db(value.database).collection(value.table)
+            .deleteOne({_id : id});
+        // client.db(value.database).collection(value.table).deleteOne({_id: id}, (err, obj) =>{
+        //     if(err){
+        //         console.log("Egy bejegyzes nem letezett.:(");
+        //     }
+        // });
+    }
+    if(nemTorolheto.length){
+        let s = "Toroltem amit tudtam, de nem toroltem: ";
+        nemTorolheto.forEach(n => s += n + ", ");
+        return s;
+    }
     return "OK";
 }
 
@@ -264,7 +430,7 @@ const server = net.createServer((socket) => {
                 answer = getTables(data.value);
                 break;
             case "Drop Table":
-                answer = dropTable(data.value);
+                answer = await dropTable(data.value);
                 break;
             case "Get Attributes By Type":
                 answer = getAttributesByType(data.value);
@@ -282,7 +448,7 @@ const server = net.createServer((socket) => {
                 answer = await getDocumentsFromTable(data.value);
                 break;
             case "Delete Documents From Table":
-                answer = deleteDocumentsFromTable(data.value);
+                answer = await deleteDocumentsFromTable(data.value);
                 break;        
         }
         console.log(answer);
@@ -296,6 +462,7 @@ const server = net.createServer((socket) => {
 server.listen(port, async () =>{
     console.log(`Server is listening on http://localhost:${port}`)
     client.connect(err =>{
+        console.log("hello Sima CLIENT");
         if(err){
             console.log(err)
         }
@@ -310,5 +477,6 @@ server.listen(port, async () =>{
 
 server.on('close', () =>{
     client.close();
+    indexClient.close();
 })
 
