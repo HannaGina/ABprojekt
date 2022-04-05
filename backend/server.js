@@ -4,6 +4,11 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = "mongodb+srv://abuser:CtquLglKDUxGQ0Su@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+const uri2 = "mongodb+srv://abuser:Akhnjofxy5QEoF8P@indexcluster.niofn.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+const indexClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+
 const port = 2500;
 
 function createDatabase(value){
@@ -51,16 +56,11 @@ function createTable(value){
         return "Kell pontosan egy primary key!";
     }
     else if(fs.existsSync("databases/" + value.database) && !fs.existsSync(fname)){
-        value.attributes.map(e => {if(e.pk){e.index = true; e.unique = true;}});
+        value.attributes.map(e => {if(e.pk){e.index = false; e.unique = true;}});
         value.attributes.map(e => {if(e.ftable === '' || e.ftable === null){e.fk = false}});
         
         fs.mkdir(`databases/${value.database}/${value.table}`, (err) =>{
             return "Letezik a tabla";
-        });
-        value.attributes.forEach(e => {
-            if(e.index){
-                fs.writeFileSync(`databases/${value.database}/${value.table}/${e.name}.ind`, "");
-            } 
         });
         fs.writeFileSync(fname, JSON.stringify(value.attributes));
         client.db(value.database).createCollection(value.table);
@@ -108,7 +108,7 @@ function getAttributesByType(value){
         return '';
     }
     var attributes = require(`./databases/${value.database}/${value.table}/${value.table}.json`);
-    return attributes.filter(a => a.type === value.type).map(a => a.name).toString();
+    return attributes.filter(a => a.type === value.type && a.unique).map(a => a.name).toString();
 }
 
 function getTableValueNames(value){
@@ -297,6 +297,12 @@ server.listen(port, async () =>{
             console.log(err)
         }
     })
+    indexClient.connect(err =>{
+        console.log("HELLO INDEXCLIENT");
+        if(err){
+            console.log(err)
+        }
+    });
 })
 
 server.on('close', () =>{
