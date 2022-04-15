@@ -10,6 +10,7 @@ public class DBFrame extends JFrame {
     private DropTable dropTable;
     private Insert insert;
     private Delete delete;
+    private Select select;
 
     public DBFrame(ClientServer cl) {
         clientServer = cl;
@@ -58,6 +59,10 @@ public class DBFrame extends JFrame {
             case "Delete" :
                 delete = new Delete(this,clientServer);
                 container.add(delete);
+                break;
+            case "Select" :
+                select = new Select(this,clientServer);
+                container.add(select);
                 break;
         }
         container.validate();
