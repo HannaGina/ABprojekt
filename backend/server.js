@@ -1,7 +1,6 @@
 const net = require('net')
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const { isAsyncFunction } = require('util/types');
 const uri = "mongodb+srv://abuser:OLb1hZPcnBK4bJEr@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
@@ -31,9 +30,10 @@ function getDatabases(){
 
 function dropDatabase(value){
     if(fs.existsSync(`databases/${value}`)){
-        fs.rmSync(`databases/${value}`,  { recursive: true, force: true });
+        fs.rmSync(`./databases/${value}`,  { recursive: true, force: true });
         client.db(value).dropDatabase();
         indexClient.db(value).dropDatabase();
+
         return 'OK';
     }
     else{
@@ -45,7 +45,6 @@ function createTable(value){
     let fname = `databases/${value.database}/${value.table}/${value.table}.json`;
     let atrributeNames = value.attributes.map(a => a.name);
     let areAtrributeNamesUnique = atrributeNames.every((e, i) => atrributeNames.indexOf(e) == i);
-    console.log(value.attributes);
     if(value.table === ''){
         return "A tablanak kell nevet adni.";
     }
@@ -62,8 +61,9 @@ function createTable(value){
         return "Kell pontosan egy primary key!";
     }
     else if(fs.existsSync("databases/" + value.database) && !fs.existsSync(fname)){
-        value.attributes.map(e => {if(e.pk){e.index = false; e.unique = true;}});
+        value.attributes.map(e => {if(e.pk){e.index = true; e.unique = true;}});
         value.attributes.map(e => {if(e.ftable === '' || e.ftable === null){e.fk = false}});
+        value.attributes.map(e => {if(e.unique){e.index = true}});
         
 
         fs.mkdirSync(`databases/${value.database}/${value.table}`, (err) =>{
@@ -101,8 +101,6 @@ async function dropTable(value){
             return "Valami hivatkozik erre a tablara";
         }
         else{
-            
-            console.log(value.order);
 
             var documentsArray = await client.db(value.database).collection(value.table).find().toArray();
             var array = [];
@@ -153,7 +151,7 @@ function getAttributesByType(value){
 function getTableValueNames(value){
     var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
     if(fs.existsSync(pathName)){
-        var valami ={};
+        var valami = {};
         require(pathName).forEach(v => valami[v.name]= v.type);
         return JSON.stringify(valami);
     }
@@ -177,10 +175,10 @@ async function insertIntoTable(value) {
     var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
     if (fs.existsSync(pathName)) {
         var cellTypes = {};
-
         //type verification
         require(pathName).forEach(c => cellTypes[c.name] = c.type);
         for (var ckey of Object.keys(value.cells)) {
+            value.cells[ckey] = parameterToType(value.cells[ckey], cellTypes[ckey]);
             if (parameterToType(value.cells[ckey], cellTypes[ckey]) == undefined) {
                 return `${ckey} fomatuma nem egyezik meg`;
             }
@@ -192,9 +190,7 @@ async function insertIntoTable(value) {
         Object.keys(value.cells).forEach(ckey => {if(ckey != primaryKey) otherValues += value.cells[ckey] + "#"});
         
 
-        //primary key verification
-        let pkOkay = (await client.db(value.database).collection(value.table)
-                                .findOne({_id: value.cells[primaryKey]})) === null;
+
         cells = require(pathName);
 
         
@@ -220,35 +216,40 @@ async function insertIntoTable(value) {
             }
         }
 
-        if(!pkOkay){
-            return "A primary key letezik mar.";
-        }
-
         //inserting into table
         let toInsert = {_id: value.cells[primaryKey], values: otherValues};
-        client.db(value.database).collection(value.table).insertOne(toInsert);
+        try{
+            client.db(value.database).collection(value.table).insertOne(toInsert);
+        }
+        catch(e){
+            console.log("1!!");
+        }
         
         //inserting nito unique index files
         cells.forEach(c => {
             if(c.unique){
-                indexClient.db(value.database).collection(value.table  + "." + c.name)
-                    .insertOne({_id: value.cells[c.name], pk: value.cells[primaryKey], references: 0});
+                try{
+                    indexClient.db(value.database).collection(value.table  + "." + c.name)
+                        .insertOne({_id: value.cells[c.name], pk: value.cells[primaryKey], references: 0});
+                }
+                catch(e){
+                    console.log("2!!");
+                }
             }
         });
         
         //inserting into not unique index files
         for(c of cells){
             if(c.index && !c.unique){
-                let querry = await indexClient.db(value.database).collection(value.table + "." + c.name)
-                    .findOne({_id: value.cells[c.name]});
-                if(querry === null){
-                    indexClient.db(value.database).collection(value.table + "." + c.name)
-                        .insertOne({_id: value.cells[c.name], pks: [ value.cells[primaryKey ]]})
+                try{
+                    await indexClient.db(value.database).collection(value.table + "." + c.name)
+                        .insertOne({_id: value.cells[c.name], pks: []});
                 }
-                else{
-                    indexClient.db(value.database).collection(value.table + "." + c.name)
+                catch(e){
+                    console.log("4!!");
+                }
+                await indexClient.db(value.database).collection(value.table + "." + c.name)
                         .updateOne({_id: value.cells[c.name]}, {$push: {pks: value.cells[primaryKey]}})
-                }
             }
         }
 
@@ -338,7 +339,18 @@ async function deleteDocumentsFromTable(value){
 
     let pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
     let cells = require(pathName);
+    let cellTypes = {};
+
+    cells.forEach(c => cellTypes[c.name] = c.type);
+    let primaryKey;
+    cells.forEach(c => {
+        if(c.pk){
+            primaryKey = c.name;
+        }
+    });
+
     let nemTorolheto = [];
+    value.cells = value.cells.map(i => parameterToType(i, cellTypes[primaryKey]));
     for(id of value.cells){
         let document = {};
         let querry = await client.db(value.database).collection(value.table)
@@ -355,7 +367,7 @@ async function deleteDocumentsFromTable(value){
         let cellNames = value.order.split(",");
 
         for(let i = 0; i < stringArray.length - 1; i++){
-            document[cellNames[i]] = stringArray[i];
+            document[cellNames[i]] = parameterToType(stringArray[i], cellTypes[cellNames[i]]);
         }
         document[getPrimaryKey(value)] = id;
 
@@ -391,6 +403,13 @@ async function deleteDocumentsFromTable(value){
             }
         }
 
+        for(c of cells){
+            if(!c.unique && c.index){
+                indexClient.db(value.database).collection(value.table + "." + c.name)
+                    .updateOne({_id: document[c.name]}, {$pull : {pks: id}});
+            }
+        }
+
         client.db(value.database).collection(value.table)
             .deleteOne({_id : id});
         // client.db(value.database).collection(value.table).deleteOne({_id: id}, (err, obj) =>{
@@ -407,11 +426,155 @@ async function deleteDocumentsFromTable(value){
     return "OK";
 }
 
+
+async function selectAndFilter(value){
+
+    tables = {};
+    typeOfCells = {};
+    indexOfCells = {};
+    uniqueOfCells = {};
+
+
+    //get the tables used
+    for(let f of value.filters){
+        if(tables[f.table] === undefined){
+            let pathName = `./databases/${value.database}/${f.table}/${f.table}.json`;
+            tables[f.table] = require(pathName);
+            typeOfCells[f.table] = {};
+            indexOfCells[f.table] = {};
+            uniqueOfCells[f.table] = {};
+        }
+    }
+
+    for(let t of Object.keys(tables)){
+        for(let c of tables[t]){
+            typeOfCells[t][c.name] = c.type;
+            indexOfCells[t][c.name] = c.index;
+            uniqueOfCells[t][c.name] = c.unique;
+        }
+    }
+
+    //check type for every filter
+    for(let i of Object.keys(value.filters)){
+        f = value.filters[i];
+        value.filters[i].value = parameterToType(f.value, typeOfCells[f.table][f.field]);
+        if(parameterToType(f.value, typeOfCells[f.table][f.field]) === undefined){
+            return `HIBA ${value.filters.indexOf(f)}. feltetel tipusa hibas`;
+        }
+        if(typeOfCells[f.table][f.field] == 'string' || typeOfCells[f.table][f.field] == ''){
+            return `HIBA ${value.filters.indexOf(f)}. feltetel tipusa string/date, az operatornem megengedett.`;
+        }
+    }
+
+    let indexedFilters = [];
+    let notIndexedFilters = [];
+    //filtering by index the filters
+    for(let f of value.filters){
+        if(indexOfCells[f.table][f.field]){
+            indexedFilters.push(f);
+        }
+        else{
+            notIndexedFilters.push(f);
+        }
+    }
+    
+    let arrayOfPks = await client.db(value.database).collection(value.table)
+                        .find().toArray();
+    Object.keys(arrayOfPks).forEach(k => {
+        arrayOfPks[k] = arrayOfPks[k]._id;
+    });
+    //console.log(arrayOfPks);
+
+    //console.log(indexedFilters);
+    for(f of indexedFilters){
+        let newArrayOfPks;
+        console.log(f.table + "." + f.field);
+        console.log(value.database, f.value);
+        switch(f.operator){
+            case "<":
+                newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $lt: f.value}}).toArray();
+                break;
+            case ">":
+                newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $gt: f.value}}).toArray();
+                break;
+            case "=":
+                newArrayOfPks = [(await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .findOne({_id : f.value}))];
+                            console.log("11111", newArrayOfPks);
+                break;
+            case "<=":
+                newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                .find({_id : { $lte: f.value}}).toArray();
+                break;
+            case ">=":
+                newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $gte: f.value}}).toArray();
+                break;
+        }
+        console.log(newArrayOfPks);
+
+        Object.keys(newArrayOfPks).forEach(k => {
+            if(uniqueOfCells[f.table][f.field]){
+                newArrayOfPks[k] = newArrayOfPks[k].pk;
+            }
+            else{
+                newArrayOfPks[k] = newArrayOfPks[k].pks;
+            }
+        });
+        newArrayOfPks = newArrayOfPks.flat();
+
+        arrayOfPks = arrayOfPks.filter(v => newArrayOfPks.includes(v));
+    }
+    console.log("1", arrayOfPks);
+    
+    let records = await client.db(value.database).collection(value.table)
+                        .find({_id: {$in: arrayOfPks}}).toArray();
+
+    let newRecords = [];
+    for(let r of records){
+        newRecords.push([r._id]);
+        newRecords[newRecords.length - 1] = newRecords[newRecords.length - 1].concat(r.values.split('#'));
+    }
+
+    console.log(newRecords);
+    for(f of notIndexedFilters){
+        //why do we need to do this
+        f.order = f.order.split(',');
+        let point = 1 + f.order.indexOf(f.field);
+        
+        
+
+        switch(f.operator){
+            case "<":
+                newRecords = newRecords.filter(a => a[point] < f.value);
+                break;
+            case ">":
+                newRecords = newRecords.filter(a => a[point] > f.value);
+                break;
+            case "=":
+                console.log(newRecords);
+                newRecords = newRecords.filter(a => a[point] == f.value);
+                break;
+            case "<=":
+                newRecords = newRecords.filter(a => a[point] <= f.value);
+                break;
+            case ">=":
+                newRecords = newRecords.filter(a => a[point] >= f.value);
+                break;
+        }
+    }
+    console.log(newRecords);
+    return newRecords;
+}
+
+
 const server = net.createServer((socket) => {
 
     socket.on('data', async (data) =>{
         data = JSON.parse(data.toString())
-        console.log("I got a request: " + data.command)
+        console.log("I got a request: " + data.command);
         let answer;
         switch(data.command){
             case "Create Database":
@@ -449,14 +612,17 @@ const server = net.createServer((socket) => {
                 break;
             case "Delete Documents From Table":
                 answer = await deleteDocumentsFromTable(data.value);
+                break;
+            case "Select":
+                answer = await selectAndFilter(data.value);
                 break;        
         }
-        console.log(answer);
+        //console.log(answer);
         socket.write(answer + '\n');
         socket.pipe(socket);
         socket.destroy();
     });
-})
+});
 
 
 server.listen(port, async () =>{
@@ -478,5 +644,4 @@ server.listen(port, async () =>{
 server.on('close', () =>{
     client.close();
     indexClient.close();
-})
-
+});

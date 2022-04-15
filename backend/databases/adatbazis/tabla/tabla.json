@@ -1,0 +1,52 @@
+[
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": true,
+        "name": "pk",
+        "index": true,
+        "pk": true,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": true,
+        "name": "unique",
+        "index": true,
+        "pk": false,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "nonunique",
+        "index": true,
+        "pk": false,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "nonindex",
+        "index": false,
+        "pk": false,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "string",
+        "index": false,
+        "pk": false,
+        "type": "string",
+        "fattr": ""
+    }
+]

@@ -1,1 +1,0 @@
-[{"fk":true,"ftable":"v","unique":false,"name":"dv","index":false,"pk":false,"type":"int","fattr":"sc"},{"fk":true,"ftable":"valami","unique":false,"name":"svdvf","index":true,"pk":true,"type":"int","fattr":"css"}]
