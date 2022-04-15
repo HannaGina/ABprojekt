@@ -176,6 +176,7 @@ public class Delete extends JPanel {
         //System.out.println(answDatas);
         String[] datas = answDatas.split(",");
 
+
         //System.out.println(datas.length);
         //System.out.println(s.length);
 
