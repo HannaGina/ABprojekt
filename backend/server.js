@@ -1,6 +1,7 @@
 const net = require('net')
 const fs = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const { join } = require('path');
 const uri = "mongodb+srv://abuser:OLb1hZPcnBK4bJEr@abprojekt.4qafu.mongodb.net/test6?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
@@ -454,15 +455,38 @@ async function selectAndFilter(value){
         }
     }
 
+    //how to
+    if(value.projections.length === 2 && value.filters.length === 0 && !value.dontDoIt){
+        let projectionName = value.projections[1];
+        let tname = projectionName.split('.')[0];
+        let cname = projectionName.split('.')[1];
+        let pathName = `./databases/${value.database}/${tname}/${tname}.json`;
+        tables[tname] = require(pathName);
+        indexOfCells[tname] = {};
+
+        for(let c of tables[tname]){
+            indexOfCells[tname][c.name] = c.index;
+        }
+
+        if (indexOfCells[tname][cname]){
+            let array = await indexClient.db(value.database).collection(tname + "." + cname)
+                            .find({}).toArray();
+            array = array.map(a => a._id);
+            return {array: array, onlyIndex: 1};
+        }
+    }
+
+
     //check type for every filter
     for(let i of Object.keys(value.filters)){
         f = value.filters[i];
         value.filters[i].value = parameterToType(f.value, typeOfCells[f.table][f.field]);
         if(parameterToType(f.value, typeOfCells[f.table][f.field]) === undefined){
-            return `HIBA ${value.filters.indexOf(f)}. feltetel tipusa hibas`;
+            return {array: `HIBA ${value.filters.indexOf(f)}. feltetel tipusa hibas`, onlyIndex: 0};
         }
-        if(typeOfCells[f.table][f.field] == 'string' || typeOfCells[f.table][f.field] == ''){
-            return `HIBA ${value.filters.indexOf(f)}. feltetel tipusa string/date, az operatornem megengedett.`;
+        if( (typeOfCells[f.table][f.field] == 'string' || typeOfCells[f.table][f.field] == '' || typeOfCells[f.table][f.field] == 'date')
+            && f.operator != "="){
+            return {array: `HIBA ${value.filters.indexOf(f)}. feltetel tipusa string/date, az operatornem megengedett.`, onlyIndex: 0};
         }
     }
 
@@ -477,19 +501,44 @@ async function selectAndFilter(value){
             notIndexedFilters.push(f);
         }
     }
-    
-    let arrayOfPks = await client.db(value.database).collection(value.table)
-                        .find().toArray();
+
+    //if there is an index, start by not getting all the values
+    let arrayOfPks;
+    if(indexedFilters.length > 0){
+        const f = indexedFilters[0];
+        switch(f.operator){
+            case "<":
+                arrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $lt: f.value}}).toArray();
+                break;
+            case ">":
+                arrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $gt: f.value}}).toArray();
+                break;
+            case "=":
+                arrayOfPks = [(await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .findOne({_id : f.value}))];
+                break;
+            case "<=":
+                arrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                .find({_id : { $lte: f.value}}).toArray();
+                break;
+            case ">=":
+                arrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
+                            .find({_id : { $gte: f.value}}).toArray();
+                break;
+        }
+    }
+    else{
+        arrayOfPks = await client.db(value.database).collection(value.table)
+                            .find().toArray(); 
+    }
     Object.keys(arrayOfPks).forEach(k => {
         arrayOfPks[k] = arrayOfPks[k]._id;
     });
-    //console.log(arrayOfPks);
 
-    //console.log(indexedFilters);
     for(f of indexedFilters){
         let newArrayOfPks;
-        console.log(f.table + "." + f.field);
-        console.log(value.database, f.value);
         switch(f.operator){
             case "<":
                 newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
@@ -502,7 +551,6 @@ async function selectAndFilter(value){
             case "=":
                 newArrayOfPks = [(await indexClient.db(value.database).collection(f.table + "." + f.field)
                             .findOne({_id : f.value}))];
-                            console.log("11111", newArrayOfPks);
                 break;
             case "<=":
                 newArrayOfPks = await indexClient.db(value.database).collection(f.table + "." + f.field)
@@ -513,7 +561,6 @@ async function selectAndFilter(value){
                             .find({_id : { $gte: f.value}}).toArray();
                 break;
         }
-        console.log(newArrayOfPks);
 
         Object.keys(newArrayOfPks).forEach(k => {
             if(uniqueOfCells[f.table][f.field]){
@@ -527,7 +574,6 @@ async function selectAndFilter(value){
 
         arrayOfPks = arrayOfPks.filter(v => newArrayOfPks.includes(v));
     }
-    console.log("1", arrayOfPks);
     
     let records = await client.db(value.database).collection(value.table)
                         .find({_id: {$in: arrayOfPks}}).toArray();
@@ -538,7 +584,6 @@ async function selectAndFilter(value){
         newRecords[newRecords.length - 1] = newRecords[newRecords.length - 1].concat(r.values.split('#'));
     }
 
-    console.log(newRecords);
     for(f of notIndexedFilters){
         //why do we need to do this
         f.order = f.order.split(',');
@@ -554,7 +599,6 @@ async function selectAndFilter(value){
                 newRecords = newRecords.filter(a => a[point] > f.value);
                 break;
             case "=":
-                console.log(newRecords);
                 newRecords = newRecords.filter(a => a[point] == f.value);
                 break;
             case "<=":
@@ -565,8 +609,257 @@ async function selectAndFilter(value){
                 break;
         }
     }
-    console.log(newRecords);
-    return newRecords;
+    return {array: newRecords, onlyIndex: 0};
+}
+
+async function joinAndFilter (value) {
+    let tables = {};
+    let typeOfCells = {};
+    let indexOfCells = {};
+    let uniqueOfCells = {};
+
+    if(value.joins.length === 0){
+        let rJson = await selectAndFilter(value);
+        rJson.array = rJson.array.toString();
+        return JSON.stringify(rJson);
+    }
+
+    //hmmmmmmmmm
+    //do the where for every stuff, and then make join table;
+    let whereClauses = {};
+    for(t of value.joinTables){
+        whereClauses[t] = [];
+    }
+
+    for(f of value.filters){
+        whereClauses[f.table].push(f);
+    }
+
+    for(t of value.joinTables){
+        const pathName = `./databases/${value.database}/${t}/${t}.json`;
+        tables[t] = require(pathName);
+        typeOfCells[t] = {};
+        indexOfCells[t] = {};
+        uniqueOfCells[t] = {};
+    }
+
+    for(t of Object.keys(tables)){
+        for(let c of tables[t]){
+            typeOfCells[t][c.name] = c.type;
+            indexOfCells[t][c.name] = c.index;
+            uniqueOfCells[t][c.name] = c.unique;
+        }
+    }
+
+
+    let resultsOfSelects = {};
+    for(t of value.joinTables){
+        let newValue = value;
+        newValue.filters = whereClauses[t];
+        newValue.dontDoIt = true;
+        newValue.table = t;
+        resultsOfSelects[t] = (await selectAndFilter(newValue)).array;
+        for(let i =0; i < resultsOfSelects[t].length; i++){
+            resultsOfSelects[t][i].splice(resultsOfSelects[t][i].length - 1, 1);
+        }
+    }
+    
+
+    //here comes the join magic
+    let objectOfResults = {};
+    for(t of Object.keys(tables)){
+        objectOfResults[t] = {};
+    }
+    joinPks = [];
+
+    //INITIALIZE BY FIRST JOIN
+    let joinc = value.joins[0];
+    value.joins.splice(0, 1);
+    if(indexOfCells[joinc.table1][joinc.field1]){
+        const orderTemp = joinc.order1, fieldTemp = joinc.field1, tableTemp = joinc.table1;
+        joinc.order1 = joinc.order2;
+        joinc.field1 = joinc.field2;
+        joinc.table1 = joinc.table2;
+
+        joinc.order2 = orderTemp;
+        joinc.field2 = fieldTemp;
+        joinc.table2 = tableTemp;
+    }
+
+    //parameter to good type
+    let t1 = joinc.table1;
+    for(let i = 0; i < resultsOfSelects[t1].length; i++){
+        for(cell of joinc.order1){
+            resultsOfSelects[t1][i][joinc.order1.indexOf(cell)] = parameterToType(resultsOfSelects[t1][i][joinc.order1.indexOf(cell)], typeOfCells[t1][cell]);
+        }
+        objectOfResults[t1][resultsOfSelects[t1][i][0]] = resultsOfSelects[t1][i]
+    }
+
+    let t2 = joinc.table2;
+    for(let i = 0; i < resultsOfSelects[t2].length; i++){
+        for(cell of joinc.order2){
+            resultsOfSelects[t2][i][joinc.order2.indexOf(cell)] = parameterToType(resultsOfSelects[t2][i][joinc.order2.indexOf(cell)], typeOfCells[t2][cell]);
+        }
+        objectOfResults[t2][resultsOfSelects[t2][i][0]] = resultsOfSelects[t2][i];
+    }
+    
+    //IF THERE IS AN INDEX
+    if(indexOfCells[joinc.table2][joinc.field2]){
+        console.log(joinc.order1, joinc.field1);
+        console.log(joinc.order2, joinc.field2);
+
+        for(let i = 0; i < resultsOfSelects[joinc.table1].length; i++){
+            let val = resultsOfSelects[joinc.table1][i][joinc.order1.indexOf(joinc.field1)];
+            
+            let doc = await indexClient.db(value.database).collection(joinc.table2 + '.' + joinc.field2)
+                        .findOne({_id: val});
+            if(doc === null){
+                continue;
+            }
+            
+            
+
+            if(doc.pk !== undefined){
+                if(objectOfResults[joinc.table2][doc.pk] !== undefined){
+                    let t1 = joinc.table1;
+                    let t2 = joinc.table2;
+                    let tempObj = {};
+                    tempObj[t1] = resultsOfSelects[joinc.table1][i][0];
+                    tempObj[t2] = doc.pk;
+                    joinPks.push(tempObj);
+                }
+            }
+            else{
+                for(pk of doc.pks){
+                    if(objectOfResults[joinc.table1][pk] !== undefined){
+                        let t1 = joinc.table1;
+                        let t2 = joinc.table2;
+                        let tempObj = {};
+                        tempObj[t1] = resultsOfSelects[joinc.table1][i][0];
+                        tempObj[t2] = pk;
+                        joinPks.push(tempObj);
+                    }
+                }
+            }
+        }
+    }
+    else {
+        //double for if no index
+        for(doc1 of Object.values(objectOfResults[joinc.table1])){
+            for(doc2 of Object.values(objectOfResults[joinc.table2])){
+                const val1 = doc1[joinc.order1.indexOf(joinc.field1)];
+                const val2 = doc2[joinc.order2.indexOf(joinc.field2)];
+                if(val1 == val2){
+                    let t1 = joinc.table1;
+                    let t2 = joinc.table2;
+                    let tempObj = {};
+                    tempObj[t1] = doc1[0];
+                    tempObj[t2] = doc2[0];
+                    joinPks.push(tempObj);
+                }
+            }
+        }
+    }
+    // console.log(joinPks);
+
+    // for(t of value.joinTables){
+    //     console.log( resultsOfSelects[t]);
+    // }
+
+    //for the rest
+    let joinPks2 = joinPks;
+    for(joinc of value.joins){
+        joinPks = joinPks2;
+        joinPks2 = [];
+
+        //parameter conversion
+        let t1 = joinc.table1;
+        for(let i = 0; i < resultsOfSelects[t1].length; i++){
+            for(cell of joinc.order1){
+                resultsOfSelects[t1][i][joinc.order1.indexOf(cell)] = parameterToType(resultsOfSelects[t1][i][joinc.order1.indexOf(cell)], typeOfCells[t1][cell]);
+            }
+            objectOfResults[t1][resultsOfSelects[t1][i][0]] = resultsOfSelects[t1][i]
+        }
+
+        let t2 = joinc.table2;
+        for(let i = 0; i < resultsOfSelects[t2].length; i++){
+            for(cell of joinc.order2){
+                resultsOfSelects[t2][i][joinc.order2.indexOf(cell)] = parameterToType(resultsOfSelects[t2][i][joinc.order2.indexOf(cell)], typeOfCells[t2][cell]);
+            }
+            objectOfResults[t2][resultsOfSelects[t2][i][0]] = resultsOfSelects[t2][i];
+        }
+
+        if(indexOfCells[joinc.table1][joinc.field1]){
+            for(let i = 0; i < joinPks.length; i++){
+                const jp = joinPks[i];
+                const pk2 = jp[joinc.table2];
+                const val = objectOfResults[joinc.table2][pk2][joinc.order2.indexOf(joinc.field2)];
+
+                const doc = await indexClient.db(value.database).collection(joinc.table1 + '.' + joinc.field1)
+                    .findOne({_id: val});
+                
+                
+
+                if(doc === null){
+                    continue;
+                }
+
+                if(doc.pk !== undefined){
+                    if(objectOfResults[joinc.table1][doc.pk] !== undefined){
+                        let t1 = joinc.table1;
+                        let tempObj = {};
+                        Object.assign(tempObj, joinPks[i]);
+                        tempObj[t1] = doc.pk;
+                        
+                        joinPks2.push(tempObj);
+                    }
+                }
+                else{
+                    for(pk of doc.pks){
+                        if(objectOfResults[joinc.table1][pk] !== undefined){
+                            let t1 = joinc.table1;
+                            let tempObj = {};
+                            Object.assign(tempObj, joinPks[i]);
+                            tempObj[t1] = pk;
+                            joinPks2.push(tempObj);
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            for(let i = 0; i < joinPks.length; i++){
+                const jp = joinPks[i];
+                const pk2 = jp[joinc.table2];
+                const val = objectOfResults[joinc.table2][pk2][joinc.order2.indexOf(joinc.field2)];
+
+                for(doc of Object.values(objectOfResults[joinc.table1])){
+                    const val2 = doc[joinc.order1.indexOf(joinc.field1)];
+                    if(val2 == val){
+                        let t1 = joinc.table1;
+                        let tempObj = {};
+                        Object.assign(tempObj, joinPks[i]);
+                        tempObj[t1] = doc[0];
+                        joinPks2.push(tempObj);
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    let result = [];
+    for(joinPk of joinPks2){
+        let tempArray = [];
+        for(t of value.joinTables){
+            tempArray = tempArray.concat(objectOfResults[t][joinPk[t]]);
+        }
+        tempArray.push('');
+        result = result.concat(tempArray);
+    }
+    console.log(result);
+    return JSON.stringify({array: result.toString(), onlyIndex: 0});
 }
 
 
@@ -614,7 +907,7 @@ const server = net.createServer((socket) => {
                 answer = await deleteDocumentsFromTable(data.value);
                 break;
             case "Select":
-                answer = await selectAndFilter(data.value);
+                answer = await joinAndFilter(data.value);
                 break;        
         }
         //console.log(answer);
@@ -639,7 +932,7 @@ server.listen(port, async () =>{
             console.log(err)
         }
     });
-})
+});
 
 server.on('close', () =>{
     client.close();

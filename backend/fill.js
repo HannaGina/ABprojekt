@@ -6,6 +6,8 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const uri2 = "mongodb+srv://abuser:Akhnjofxy5QEoF8P@indexcluster.niofn.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 const indexClient = new MongoClient(uri2, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+const collectionName = 'btabla2';
+
 async function valami(){
     try{
         await client.connect();
@@ -18,8 +20,8 @@ async function valami(){
         let docsNonuniqueObject = {};
         
         try{
-            await client.db('beszuras').dropCollection('btabla');
-            await indexClient.db('beszuras').dropDatabase();
+            await client.db('beszuras').dropCollection(collectionName);
+             //await indexClient.db('beszuras').dropDatabase();
         }
         catch(e){}
         
@@ -29,7 +31,7 @@ async function valami(){
             let unique = (i * 2);
             let nonunique = Math.floor(i * Math.random());
             let nonindex = Math.floor(50000 * Math.random());
-            docs.push({_id: pk, values: `${unique}#${nonunique}#${nonindex}#`});
+            docs.push({_id: pk, values: `${nonunique}#${nonindex}#${unique}#`});
             docsPk.push({_id: pk, "pk": pk});
             docsUnique.push({_id: unique, pk: pk});
 
@@ -42,13 +44,13 @@ async function valami(){
             docsNonunique.push({_id: parseInt(k), pks: docsNonuniqueObject[k]});
         }
 
-        await client.db('beszuras').collection('btabla').insertMany(docs);
+        await client.db('beszuras').collection(collectionName).insertMany(docs);
         console.log(1);
-        await indexClient.db('beszuras').collection('btabla.pk').insertMany(docsPk);
+        await indexClient.db('beszuras').collection(`${collectionName}.pk`).insertMany(docsPk);
         console.log(2);
-        await indexClient.db('beszuras').collection('btabla.unique').insertMany(docsUnique);
+        await indexClient.db('beszuras').collection(`${collectionName}.unique`).insertMany(docsUnique);
         console.log(3);
-        await indexClient.db('beszuras').collection('btabla.nonunique').insertMany(docsNonunique);
+        await indexClient.db('beszuras').collection(`${collectionName}.nonunique`).insertMany(docsNonunique);
         console.log(4);
     }
     finally{

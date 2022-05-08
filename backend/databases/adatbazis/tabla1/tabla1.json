@@ -1,0 +1,22 @@
+[
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": true,
+        "name": "pk",
+        "index": true,
+        "pk": true,
+        "type": "int",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": true,
+        "name": "unique",
+        "index": true,
+        "pk": false,
+        "type": "int",
+        "fattr": "pk"
+    }
+]
