@@ -38,14 +38,21 @@ public class filterPanel extends JPanel {
         updateFields();
         initializeOperators();
 
+        tableCombo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updateFields();
+            }
+        });
+
         value.setToolTipText(types.get(fields.getSelectedIndex()));
         fields.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                value.setToolTipText(types.get(fields.getSelectedIndex()));
+                if(fields.getItemCount()>0)
+                    value.setToolTipText(types.get(fields.getSelectedIndex()));
             }
         });
-
 
         add(tableCombo);
         add(fields);
@@ -79,15 +86,21 @@ public class filterPanel extends JPanel {
 
         order=new String();
 
+        types = new ArrayList<>();
+        types.add(ans.get(answKey).toString());
+
         fields.addItem(answKey);
+
+        //System.out.println(ans);
         for (Object a : ans.keySet())
         if(!a.toString().equals(answKey)){
             order+=a.toString()+",";
-            fields.addItem(a.toString());
             String type = ans.get(a).toString();
             if (type.equals("date")) type += "(yyyy/mm/dd)";
             if (type.equals("datetime")) type += "(yyyy/mm/dd:hh:mm)";
             types.add(type);
+
+            fields.addItem(a.toString());
         }
 
     }
