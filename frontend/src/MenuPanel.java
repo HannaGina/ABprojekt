@@ -12,6 +12,7 @@ public class MenuPanel extends JPanel {
     private JButton dropTableBtn;
     private JButton insertBtn;
     private JButton deleteBtn;
+    private JButton selectBtn;
 
     public MenuPanel(DBFrame dbFrame) {
         setLayout(new BoxLayout(this,BoxLayout.Y_AXIS));
@@ -29,6 +30,8 @@ public class MenuPanel extends JPanel {
         insertBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
         deleteBtn = new JButton("Adatok torlese");
         deleteBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        selectBtn = new JButton("Adatok lekerese");
+        selectBtn.setAlignmentX(JComponent.CENTER_ALIGNMENT);
 
         createDatabaseBtn.addMouseListener(new MouseAdapter() {
             @Override
@@ -73,6 +76,13 @@ public class MenuPanel extends JPanel {
             }
         });
 
+        selectBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dbFrame.JumpTo("Select");
+            }
+        });
+
 
         this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(createDatabaseBtn);
@@ -86,6 +96,8 @@ public class MenuPanel extends JPanel {
         this.add(insertBtn);
         this.add(Box.createRigidArea(new Dimension(0, 10)));
         this.add(deleteBtn);
+        this.add(Box.createRigidArea(new Dimension(0, 10)));
+        this.add(selectBtn);
         this.add(Box.createRigidArea(new Dimension(0, 10)));
 
         Arrays.stream(this.getComponents()).forEach(a-> {

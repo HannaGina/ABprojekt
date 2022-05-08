@@ -19,7 +19,7 @@ public class CreateTable extends JPanel {
     private DBFrame dbFrame;
     private JLabel answerLabel;
     private ClientServer clientServer;
-    private JButton addAtribute;
+    private JButton addAttribute;
     private ArrayList<AttributePanel> attributePanels;
     private JLabel dbLabel;
     private JComboBox dbCombo;
@@ -39,8 +39,8 @@ public class CreateTable extends JPanel {
         createTableBtn.setFont(new Font("Serif",Font.BOLD, 25));
         menuBtn = new JButton("Menu");
         menuBtn.setFont(new Font("Serif",Font.BOLD, 25));
-        addAtribute = new JButton("Attributum hozzaadasa");
-        addAtribute.setFont(new Font("Serif",Font.BOLD, 25));
+        addAttribute = new JButton("Attributum hozzaadasa");
+        addAttribute.setFont(new Font("Serif",Font.BOLD, 25));
         dbLabel = new JLabel("Adatbazis:");
         dbLabel.setFont(new Font("Serif",Font.BOLD, 25));
         dbCombo = new JComboBox();
@@ -54,7 +54,7 @@ public class CreateTable extends JPanel {
         mainPanel.add(dbCombo);
         mainPanel.add(jLabel);
         mainPanel.add(jTextField);
-        mainPanel.add(addAtribute);
+        mainPanel.add(addAttribute);
 
         menuBtn.addMouseListener(new MouseAdapter() {
             @Override
@@ -89,7 +89,7 @@ public class CreateTable extends JPanel {
         });
 
         CreateTable cr = this;
-        addAtribute.addMouseListener(new MouseAdapter() {
+        addAttribute.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 AttributePanel attributePanel = new AttributePanel(clientServer,cr);
