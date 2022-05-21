@@ -48,6 +48,19 @@ public class Select extends JPanel {
     private ArrayList<String> joinedTables;
     private List<joinPanel> joinPanels;
 
+    //group by
+    private JButton addGroupBy;
+    private JButton finishGroupBy;
+    private JPanel groupBy;
+    private JScrollPane groupByScroll;
+    private List<GroupByPanel> groupByPanels;
+
+    //group by projection
+    private JButton addGroupByProjection;
+    private JPanel groupByProjection;
+    private JScrollPane groupByProjectionScroll;
+    private List<GroupProjectionPanel> groupByProjectionPanels;
+
     private JPanel database;
     private JPanel projection;
     private JPanel from;
@@ -56,6 +69,7 @@ public class Select extends JPanel {
     private Map<String, Integer> index; //the attributes index in the orderArray
     private List<Boolean> show; //which attributes we have to show - orderArray order
     private List<String> orderArray; //initial array of values
+    private List<String> orderGroupBy;
 
     //answer
     private JFrame answerFrame;
@@ -76,6 +90,13 @@ public class Select extends JPanel {
         addJoin.setFont(new Font("Serif", Font.BOLD, 25));
         finishJoin = new JButton("Joinok lezarasa");
         finishJoin.setFont(new Font("Serif", Font.BOLD, 25));
+        addGroupBy = new JButton("Group By hozzáadása");
+        addGroupBy.setFont(new Font("Serif", Font.BOLD, 25));
+        finishGroupBy = new JButton("Group By lezarasa");
+        finishGroupBy.setFont(new Font("Serif", Font.BOLD, 25));
+        addGroupByProjection = new JButton("Group By projekció hozzáadása");
+        addGroupByProjection.setFont(new Font("Serif", Font.BOLD, 25));
+
         dbLabel = new JLabel("Adatbázis neve: ");
         dbLabel.setFont(new Font("Serif", Font.BOLD, 25));
         answerLabel = new JLabel();
@@ -84,11 +105,16 @@ public class Select extends JPanel {
         tableLabel.setFont(new Font("Serif", Font.BOLD, 25));
         selectLabel = new JLabel("Mezők:");
         selectLabel.setFont(new Font("Serif", Font.BOLD, 25));
+
         dbCombo = new JComboBox();
         dbCombo.setFont(new Font("Serif", Font.BOLD, 25));
         tableCombo = new JComboBox();
         tableCombo.setFont(new Font("Serif", Font.BOLD, 25));
+
         filterPanels = new ArrayList<>();
+        groupByPanels = new ArrayList<>();
+        groupByProjectionPanels = new ArrayList<>();
+
         unselectedFieldsList = new DefaultListModel<>();
         selectedFieldsList = new DefaultListModel<>();
         index = new HashMap<>();
@@ -113,12 +139,17 @@ public class Select extends JPanel {
         unselectedFieldsList.addElement("Kiválasztható  mezők");
 
         selectBtn.setEnabled(false);
+        addFilter.setEnabled(false);
+        addGroupBy.setEnabled(false);
+        finishGroupBy.setEnabled(false);
 
         updateDbCombo();
         updateTableCombo();
         updateFields();
         initializeJoins();
         initializeFilters();
+        initializeGroupBy();
+        initializeGroupByProjection();
 
         //joinedTables.add(tableCombo.getSelectedItem().toString());
         //notJoinedTables.remove(tableCombo.getSelectedItem().toString());
@@ -144,12 +175,18 @@ public class Select extends JPanel {
                     joinedTables.forEach(j -> notJoinedTables.add(j));
                     joinedTables.clear();
                     updateFields();
+                    mainPanel.remove(groupByScroll);
                     mainPanel.remove(filterScroll);
                     mainPanel.remove(joinScroll);
+                    mainPanel.remove(groupByProjectionScroll);
                     initializeJoins();
                     initializeFilters();
+                    initializeGroupBy();
+                    initializeGroupByProjection();
+                    mainPanel.add(groupByProjectionScroll);
                     mainPanel.add(joinScroll);
                     mainPanel.add(filterScroll);
+                    mainPanel.add(groupByScroll);
                     selectBtn.setEnabled(false);
                     validate();
                     repaint();
@@ -256,8 +293,57 @@ public class Select extends JPanel {
 
                 addJoin.setEnabled(false);
                 finishJoin.setEnabled(false);
-                selectBtn.setEnabled(true);
+                addGroupBy.setEnabled(true);
+                finishGroupBy.setEnabled(true);
+                addFilter.setEnabled(true);
                 updateFields();
+            }
+        });
+
+        addGroupBy.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ArrayList<String> tables = new ArrayList<>();
+                tables.add(tableCombo.getSelectedItem().toString());
+                GroupByPanel f = new GroupByPanel(dbCombo.getSelectedItem().toString(), joinedTables, clientServer);
+                groupBy.add(f);
+                groupBy.add(Box.createRigidArea(new Dimension(0, 10)));
+                groupByPanels.add(f);
+                groupBy.validate();
+                groupBy.repaint();
+                groupByScroll.validate();
+                groupByScroll.repaint();
+            }
+        });
+
+        finishGroupBy.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                for (GroupByPanel g : groupByPanels) {
+                    g.blockateThis();
+                }
+
+                addGroupBy.setEnabled(false);
+                finishGroupBy.setEnabled(false);
+                selectBtn.setEnabled(true);
+                addGroupByProjection.setEnabled(true);
+                updateFields();
+            }
+        });
+
+        addGroupByProjection.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ArrayList<String> tables = new ArrayList<>();
+                tables.add(tableCombo.getSelectedItem().toString());
+                GroupProjectionPanel f = new GroupProjectionPanel(dbCombo.getSelectedItem().toString(), joinedTables, clientServer);
+                groupByProjection.add(f);
+                groupByProjection.add(Box.createRigidArea(new Dimension(0, 10)));
+                groupByProjectionPanels.add(f);
+                groupByProjection.validate();
+                groupByProjection.repaint();
+                groupByProjectionScroll.validate();
+                groupByProjectionScroll.repaint();
             }
         });
 
@@ -307,8 +393,10 @@ public class Select extends JPanel {
         mainPanel.add(database);
         mainPanel.add(from);
         mainPanel.add(projection);
+        mainPanel.add(groupByProjectionScroll);
         mainPanel.add(joinScroll);
         mainPanel.add(filterScroll);
+        mainPanel.add(groupByScroll);
 
         controlPanel = new JPanel();
         controlPanel.add(selectBtn);
@@ -357,7 +445,7 @@ public class Select extends JPanel {
         index = new HashMap<>();
         show = new ArrayList<>();
         orderArray = new ArrayList<>();
-
+        orderGroupBy = new ArrayList<>();
 
         for (String table : joinedTables) {
             JSONObject message = new JSONObject();
@@ -388,6 +476,7 @@ public class Select extends JPanel {
             show.add(Boolean.FALSE);
             index.put(ak, orderArray.size());
             orderArray.add(ak);
+            orderGroupBy.add(ak);
             unselectedFieldsList.addElement(ak);
             int i = orderArray.size();
             for (Object a : ans.keySet()) {
@@ -396,13 +485,32 @@ public class Select extends JPanel {
                     unselectedFieldsList.addElement(attr);
                     order += attr + ",";
                     orderArray.add(attr);
+                    orderGroupBy.add(attr);
                     index.put(attr, i);
                     show.add(Boolean.FALSE);
                     ++i;
                 }
             }
         }
+        if (!groupByPanels.isEmpty()) {
+            order = new String();
+            index = new HashMap<>();
+            show = new ArrayList<>();
+            orderArray = new ArrayList<>();
+            unselectedFieldsList.clear();
+            unselectedFieldsList.addElement("Kiválasztható  mezők");
 
+            int i = 0;
+            for (GroupByPanel g : groupByPanels) {
+                String attr = g.toString();
+                unselectedFieldsList.addElement(attr);
+                order += attr + ",";
+                orderArray.add(attr);
+                index.put(attr, i);
+                show.add(Boolean.FALSE);
+                ++i;
+            }
+        }
 
         //System.out.println(order);
     }
@@ -442,6 +550,39 @@ public class Select extends JPanel {
         joinScroll.setAutoscrolls(true);
     }
 
+    public void initializeGroupBy() {
+        groupByPanels = new ArrayList<>();
+        groupBy = new JPanel();
+        groupBy.setLayout(new BoxLayout(groupBy, BoxLayout.Y_AXIS));
+        addGroupBy.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        addGroupBy.setEnabled(false);
+        finishGroupBy.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        finishGroupBy.setEnabled(false);
+        groupBy.add(addGroupBy);
+        groupBy.add(Box.createRigidArea(new Dimension(0, 10)));
+        groupBy.add(finishGroupBy);
+        groupBy.add(Box.createRigidArea(new Dimension(0, 20)));
+        //filter.setPreferredSize(new Dimension(400,20));
+
+        groupByScroll = new JScrollPane(groupBy);
+        groupByScroll.setPreferredSize(new Dimension(400, 200));
+        groupByScroll.setAutoscrolls(true);
+    }
+
+    public void initializeGroupByProjection() {
+        groupByProjectionPanels = new ArrayList<>();
+        groupByProjection = new JPanel();
+        groupByProjection.setLayout(new BoxLayout(groupByProjection, BoxLayout.Y_AXIS));
+        addGroupByProjection.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        addGroupByProjection.setEnabled(false);
+        groupByProjection.add(addGroupByProjection);
+        groupByProjection.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        groupByProjectionScroll = new JScrollPane(groupByProjection);
+        groupByProjectionScroll.setPreferredSize(new Dimension(400, 200));
+        groupByProjectionScroll.setAutoscrolls(true);
+    }
+
     public JSONObject toJSONMessage() {
         JSONObject bigMessage = new JSONObject();
         bigMessage.put("command", "Select");
@@ -454,6 +595,8 @@ public class Select extends JPanel {
         JSONArray messageArrayJoin = new JSONArray();
         JSONArray messageArrayProjection = new JSONArray();
         JSONArray messageArrayJoinTables = new JSONArray();
+        JSONArray messageArrayGroupBy = new JSONArray();
+        JSONArray messageArrayGroupByProjection = new JSONArray();
         for (filterPanel f : filterPanels) {
             messageArray.add(f.toJSONObject());
             //    System.out.println(f.toJSONObject().toString());
@@ -466,6 +609,14 @@ public class Select extends JPanel {
             messageArrayJoinTables.add(t);
         }
 
+        for (GroupByPanel g : groupByPanels) {
+            messageArrayGroupBy.add(g.toJSONObject());
+        }
+        
+        for (GroupProjectionPanel g : groupByProjectionPanels) {
+            messageArrayGroupByProjection.add(g.toJSONObject());
+        }
+
         for (int i = 0; i < selectedFieldsList.size(); i++) {
             messageArrayProjection.add(selectedFieldsList.get(i));
         }
@@ -473,6 +624,9 @@ public class Select extends JPanel {
         message.put("filters", messageArray);
         message.put("joins", messageArrayJoin);
         message.put("joinTables", messageArrayJoinTables);
+        message.put("groupBy", messageArrayGroupBy);
+        message.put("groupByOrder", orderGroupBy.toString());
+        message.put("groupByProjection", messageArrayGroupByProjection);
         bigMessage.put("value", message);
 
         return bigMessage;
@@ -510,18 +664,14 @@ public class Select extends JPanel {
             }
         } else {
             String ans = answ.get("array").toString();
-            //System.out.println(ans);
-            //System.out.println(orderArray);
-            //        ans = ans.substring(1, ans.length() - 1);
-            /*JSONObject message2 = new JSONObject();
-            message2.put("database", dbCombo.getSelectedItem().toString());
-            message2.put("table", tableCombo.getSelectedItem().toString());
 
-            JSONObject messageKey = new JSONObject();
-            messageKey.put("command", "Get Primary Key");
-            messageKey.put("value", message2);
-            String answKey = tableCombo.getSelectedItem().toString() + "." + clientServer.send(messageKey.toJSONString());
-*/
+            List<String>ordAr = new ArrayList<>(orderArray);
+            List<Boolean>shw = new ArrayList<>(show);
+            for (GroupProjectionPanel g : groupByProjectionPanels) {
+                ordAr.add(g.toString());
+                shw.add(Boolean.TRUE);   
+            }
+            
             ans += ",";
             String[] datas = ans.split(",,");
             Set<String> dataSet = new HashSet<>();
@@ -529,33 +679,25 @@ public class Select extends JPanel {
                 String[] values = d.split(",");
                 String keep = "";
                 for (int i = 0; i < values.length; i++)
-                    if (show.get(i)) keep += values[i] + ",";
+                    if (shw.get(i)) keep += values[i] + ",";
 
                 dataSet.add(keep);
             });
+            
 
-            int colNumber = selectedFieldsList.size() - 1;
+            int colNumber = selectedFieldsList.size() - 1 + groupByProjectionPanels.size();
 //        System.out.println(colNumber);
             int rowNumber = dataSet.size() + 1;
 //        System.out.println(rowNumber);
 
             answerPanel.setLayout(new GridLayout(rowNumber, colNumber));
 
-            System.out.println(orderArray);
-            //System.out.println(show);
-            //System.out.println(index);
-
-            /*if (show.get(index.get(answKey))) {
-                JLabel label = new JLabel(answKey);
-                label.setFont(new Font("Serif", Font.BOLD, 25));
-                label.setBorder(BorderFactory.createLineBorder(Color.black));
-                label.setHorizontalAlignment(SwingConstants.CENTER);
-                answerPanel.add(label);
-            }*/
-            for (int i = 0; i < orderArray.size(); i++)
-                if (show.get(i)) {
-//            System.out.println(orderArray.get(i));
-                    JLabel label = new JLabel(orderArray.get(i));
+            //System.out.println(ordAr);
+            
+            for (int i = 0; i < ordAr.size(); i++)
+                if (shw.get(i)) {
+//            System.out.println(ordAr.get(i));
+                    JLabel label = new JLabel(ordAr.get(i));
                     label.setFont(new Font("Serif", Font.BOLD, 25));
                     label.setBorder(BorderFactory.createLineBorder(Color.black));
                     label.setHorizontalAlignment(SwingConstants.CENTER);
