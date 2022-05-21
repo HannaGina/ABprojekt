@@ -456,7 +456,7 @@ async function selectAndFilter(value){
     }
 
     //how to
-    if(value.projections.length === 2 && value.filters.length === 0 && !value.dontDoIt){
+    if(value.projections.length === 2 && value.filters.length === 0 && !value.dontDoIt && !value.groupBy.length){
         let projectionName = value.projections[1];
         let tname = projectionName.split('.')[0];
         let cname = projectionName.split('.')[1];
@@ -613,6 +613,7 @@ async function selectAndFilter(value){
 }
 
 async function joinAndFilter (value) {
+    let originalJoins = JSON.parse(JSON.stringify(value.joins));
     let tables = {};
     let typeOfCells = {};
     let indexOfCells = {};
@@ -620,8 +621,7 @@ async function joinAndFilter (value) {
 
     if(value.joins.length === 0){
         let rJson = await selectAndFilter(value);
-        rJson.array = rJson.array.toString();
-        return JSON.stringify(rJson);
+        return rJson;
     }
 
     //hmmmmmmmmm
@@ -855,18 +855,152 @@ async function joinAndFilter (value) {
         for(t of value.joinTables){
             tempArray = tempArray.concat(objectOfResults[t][joinPk[t]]);
         }
-        tempArray.push('');
-        result = result.concat(tempArray);
+        result.push(tempArray);
     }
-    console.log(result);
-    return JSON.stringify({array: result.toString(), onlyIndex: 0});
+    value.joins = originalJoins;
+    return {array: result, onlyIndex: 0};
+}
+
+async function groupAndSelect(value){
+    let tables = {};
+    let typeOfCells = {};
+    let indexOfCells = {};
+    let uniqueOfCells = {};
+    
+    let selectResults = await joinAndFilter(value);
+    if(value.groupBy.length === 0){
+        if(selectResults.onlyIndex){
+            console.log(selectResults);
+            selectResults.array = selectResults.array.toString();
+            return JSON.stringify(selectResults);
+        }
+
+        let newArray = [];
+        for(arrayRow of selectResults.array){
+            arrayRow.push('');
+            newArray = newArray.concat(arrayRow);
+        }
+        selectResults.array = newArray.toString();
+        return JSON.stringify(selectResults);
+    }
+
+
+
+    for(t of value.joinTables){
+        const pathName = `./databases/${value.database}/${t}/${t}.json`;
+        tables[t] = require(pathName);
+        typeOfCells[t] = {};
+        indexOfCells[t] = {};
+        uniqueOfCells[t] = {};
+    }
+
+    for(t of Object.keys(tables)){
+        for(let c of tables[t]){
+            typeOfCells[t][c.name] = c.type;
+            indexOfCells[t][c.name] = c.index;
+            uniqueOfCells[t][c.name] = c.unique;
+        }
+    }
+    value.groupByOrder = value.groupByOrder.substring(1);
+    value.groupByOrder = value.groupByOrder.slice(0, -1);
+    value.groupByOrder = value.groupByOrder.split(', ');
+    //group stuff by group by
+
+
+    //validate groupByProjection
+    for(gProjection of value.groupByProjection){
+        const type = typeOfCells[gProjection.table][gProjection.field];
+        if(type === 'string' || type === 'date' || type === 'datetime'){
+            if(gProjection.function === 'AVG' || gProjection.function === 'SUM'){
+                return JSON.stringify({array: `HIBA ${gProjection.table}.${gProjection.field} tipusa ${type}, nem lehet ${gProjection.function}-t hasznalni ra.`,
+                            onlyIndex: '0'});
+            }
+        }
+    }
+
+
+
+
+    let groupByObj = {};
+    for(arrayRow of selectResults.array){
+        let groupByIdentifier = '';
+        for(column of value.groupBy){
+            let fullName = `${column.table}.${column.field}`;
+            groupByIdentifier += arrayRow[value.groupByOrder.indexOf(fullName)].toString();
+            groupByIdentifier += "#";
+        }
+
+        if(!groupByObj[groupByIdentifier]){
+            groupByObj[groupByIdentifier] = [];
+        }
+
+        groupByObj[groupByIdentifier].push(arrayRow);
+    }
+
+    let resultArray = [];
+    for(groupByArrays of Object.values(groupByObj)){
+        let newArray = [];
+        for(column of value.groupBy){
+            let fullName = `${column.table}.${column.field}`;
+            newArray.push(groupByArrays[0][value.groupByOrder.indexOf(fullName)]);
+        }
+        
+        for(gProjection of value.groupByProjection){
+            let newValue;
+            let fullName = `${gProjection.table}.${gProjection.field}`;
+            for(arrayRow of groupByArrays){  
+                let currentValue = arrayRow[value.groupByOrder.indexOf(fullName)];
+                switch(gProjection.function){
+                    case 'MIN':
+                        if(!newValue || currentValue < newValue){
+                            newValue = currentValue;
+                        }
+                        break;
+                    case 'MAX':
+                        if(!newValue || currentValue > newValue){
+                            newValue = currentValue;
+                        }
+                        break;
+                    case 'AVG':
+                        if(!newValue){
+                            newValue = 0;
+                        }
+                        newValue += currentValue;
+                        break;
+                    case 'COUNT':
+                        if(!newValue){
+                            newValue = 0;
+                        }
+                        newValue++;
+                        break;
+                    case 'SUM':
+                        if(!newValue){
+                            newValue = 0;
+                        }
+                        newValue += currentValue;
+                        break;
+                }
+            }
+
+            if(gProjection.function === 'AVG'){
+                newValue /= groupByArrays.length;
+            }
+            newArray.push(newValue);
+        }
+
+        newArray.push('');
+        resultArray = resultArray.concat(newArray);
+    }
+    console.log(resultArray);
+
+    return JSON.stringify({array: resultArray.toString(), onlyIndex: '0'})
 }
 
 
 const server = net.createServer((socket) => {
 
     socket.on('data', async (data) =>{
-        data = JSON.parse(data.toString())
+        data = JSON.parse(data.toString());
         console.log("I got a request: " + data.command);
         let answer;
         switch(data.command){
@@ -907,7 +1041,7 @@ const server = net.createServer((socket) => {
                 answer = await deleteDocumentsFromTable(data.value);
                 break;
             case "Select":
-                answer = await joinAndFilter(data.value);
+                answer = await groupAndSelect(data.value);
                 break;        
         }
         //console.log(answer);

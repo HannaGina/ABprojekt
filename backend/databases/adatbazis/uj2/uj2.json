@@ -1,0 +1,42 @@
+[
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": true,
+        "name": "pk",
+        "index": true,
+        "pk": true,
+        "type": "int",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": false,
+        "name": "nonunique",
+        "index": false,
+        "pk": false,
+        "type": "int",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": false,
+        "name": "date",
+        "index": false,
+        "pk": false,
+        "type": "date",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": false,
+        "name": "string",
+        "index": false,
+        "pk": false,
+        "type": "string",
+        "fattr": "pk"
+    }
+]

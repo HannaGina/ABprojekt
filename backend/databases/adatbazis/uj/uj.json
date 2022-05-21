@@ -1,0 +1,32 @@
+[
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": true,
+        "name": "pk",
+        "index": true,
+        "pk": true,
+        "type": "int",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": false,
+        "name": "datum",
+        "index": false,
+        "pk": false,
+        "type": "date",
+        "fattr": "pk"
+    },
+    {
+        "fk": false,
+        "ftable": "tabla",
+        "unique": false,
+        "name": "dateTime",
+        "index": false,
+        "pk": false,
+        "type": "datetime",
+        "fattr": "pk"
+    }
+]
