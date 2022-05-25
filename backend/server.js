@@ -705,8 +705,6 @@ async function joinAndFilter (value) {
     
     //IF THERE IS AN INDEX
     if(indexOfCells[joinc.table2][joinc.field2]){
-        console.log(joinc.order1, joinc.field1);
-        console.log(joinc.order2, joinc.field2);
 
         for(let i = 0; i < resultsOfSelects[joinc.table1].length; i++){
             let val = resultsOfSelects[joinc.table1][i][joinc.order1.indexOf(joinc.field1)];
@@ -858,7 +856,7 @@ async function joinAndFilter (value) {
         result.push(tempArray);
     }
     value.joins = originalJoins;
-    return {array: result, onlyIndex: 0};
+    return {array: result, onlyIndex: '0'};
 }
 
 async function groupAndSelect(value){
@@ -871,16 +869,19 @@ async function groupAndSelect(value){
     if(value.groupBy.length === 0){
         if(selectResults.onlyIndex){
             console.log(selectResults);
+            for(arrayRowResult of selectResults.array){
+                arrayRowResult.push('');
+            }
             selectResults.array = selectResults.array.toString();
             return JSON.stringify(selectResults);
         }
 
         let newArray = [];
         for(arrayRow of selectResults.array){
-            arrayRow.push('');
             newArray = newArray.concat(arrayRow);
         }
         selectResults.array = newArray.toString();
+        console.log(selectResults);
         return JSON.stringify(selectResults);
     }
 
@@ -913,7 +914,7 @@ async function groupAndSelect(value){
         if(type === 'string' || type === 'date' || type === 'datetime'){
             if(gProjection.function === 'AVG' || gProjection.function === 'SUM'){
                 return JSON.stringify({array: `HIBA ${gProjection.table}.${gProjection.field} tipusa ${type}, nem lehet ${gProjection.function}-t hasznalni ra.`,
-                            onlyIndex: '0'});
+                            onlyIndex: 0});
             }
         }
     }
@@ -991,9 +992,9 @@ async function groupAndSelect(value){
         newArray.push('');
         resultArray = resultArray.concat(newArray);
     }
-    console.log(resultArray);
+    console.log(resultArray.toString());
 
-    return JSON.stringify({array: resultArray.toString(), onlyIndex: '0'})
+    return JSON.stringify({array: resultArray, onlyIndex: 0})
 }
 
 
