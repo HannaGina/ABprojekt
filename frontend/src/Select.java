@@ -362,8 +362,9 @@ public class Select extends JPanel {
                     parseException.printStackTrace();
                 }
 
-                if (answDatas.get("array").toString().startsWith("HIBA")) {
-                    answerLabel.setText(answDatas.get("array").toString());
+                if (answDatas.get("array").toString().startsWith("H,I,B,A")) {
+                    String msg = String.join("", answDatas.get("array").toString().split(","));
+                    answerLabel.setText(msg);
                 } else {
                     answerLabel.setText("");
                     showAnswer(answDatas);
