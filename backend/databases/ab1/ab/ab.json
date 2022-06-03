@@ -1,0 +1,42 @@
+[
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": true,
+        "name": "pk",
+        "index": true,
+        "pk": true,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": true,
+        "name": "unique",
+        "index": true,
+        "pk": false,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "string",
+        "index": false,
+        "pk": false,
+        "type": "string",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "bit",
+        "index": false,
+        "pk": false,
+        "type": "bit",
+        "fattr": ""
+    }
+]

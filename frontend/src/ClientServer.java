@@ -22,8 +22,8 @@ public class ClientServer {
     private int port;
 
     public ClientServer() {
-        ip = "192.168.0.104";
-        //ip = "172.30.116.211";
+        //ip = "192.168.0.104";
+        ip = "127.0.0.1";
         port = 2500;
     }
 
