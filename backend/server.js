@@ -102,33 +102,36 @@ async function dropTable(value){
             return "Valami hivatkozik erre a tablara";
         }
         else{
-
+            
             var documentsArray = await client.db(value.database).collection(value.table).find().toArray();
             var array = [];
             var pathName = `./databases/${value.database}/${value.table}/${value.table}.json`;
             let cells = require(pathName);
-            documentsArray.forEach(d => {
-                let cellNames = value.order.split(",");
-                let stringArray = d.values.split("#");
-                let document = {};
-                for(let i = 0; i < stringArray.length - 1; i++){
-                    document[cellNames[i]] = stringArray[i];
-                }
-
-                document[getPrimaryKey(value)] = d.id;
-
-                for(c of cells){
-                    if(c.fk){
-                        indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
-                            .updateOne({_id: document[c.name]}, {$inc : {references: -1}});
+            //csak akkor hajtsuk vegre, ha nem az egyeduli tabla
+            if(value.order){
+                documentsArray.forEach(d => {
+                    let cellNames = value.order.split(",");
+                    let stringArray = d.values.split("#");
+                    let document = {};
+                    for(let i = 0; i < stringArray.length - 1; i++){
+                        document[cellNames[i]] = stringArray[i];
                     }
-                }
 
-            });
+                    document[getPrimaryKey(value)] = d.id;
+
+                    for(c of cells){
+                        if(c.fk){
+                            indexClient.db(value.database).collection(c.ftable + "." + c.fattr)
+                                .updateOne({_id: document[c.name]}, {$inc : {references: -1}});
+                        }
+                    }
+
+                });
+            }
             
             for(c of cells){
-                if(c.unique){
-                    indexClient.db(value.database).dropCollection(value.table + "." + c.name);
+                if(c.index){
+                    indexClient.db(value.database).dropCollection(value.table + "." + c.name, (err) => {});
                 }
             }
             fs.rmSync(fname,  { recursive: true, force: true });
@@ -180,7 +183,7 @@ async function insertIntoTable(value) {
         require(pathName).forEach(c => cellTypes[c.name] = c.type);
         for (var ckey of Object.keys(value.cells)) {
             value.cells[ckey] = parameterToType(value.cells[ckey], cellTypes[ckey]);
-            if (parameterToType(value.cells[ckey], cellTypes[ckey]) == undefined) {
+            if (value.cells[ckey] == undefined) {
                 return `${ckey} fomatuma nem egyezik meg`;
             }
         }
@@ -413,11 +416,6 @@ async function deleteDocumentsFromTable(value){
 
         client.db(value.database).collection(value.table)
             .deleteOne({_id : id});
-        // client.db(value.database).collection(value.table).deleteOne({_id: id}, (err, obj) =>{
-        //     if(err){
-        //         console.log("Egy bejegyzes nem letezett.:(");
-        //     }
-        // });
     }
     if(nemTorolheto.length){
         let s = "Toroltem amit tudtam, de nem toroltem: ";
@@ -758,11 +756,6 @@ async function joinAndFilter (value) {
             }
         }
     }
-    // console.log(joinPks);
-
-    // for(t of value.joinTables){
-    //     console.log( resultsOfSelects[t]);
-    // }
 
     //for the rest
     let joinPks2 = joinPks;
@@ -868,7 +861,6 @@ async function groupAndSelect(value){
     let selectResults = await joinAndFilter(value);
     if(value.groupBy.length === 0){
         if(selectResults.onlyIndex){
-            console.log(selectResults);
             for(arrayRowResult of selectResults.array){
                 arrayRowResult.push('');
             }
@@ -881,7 +873,6 @@ async function groupAndSelect(value){
             newArray = newArray.concat(arrayRow);
         }
         selectResults.array = newArray.toString();
-        console.log(selectResults);
         return JSON.stringify(selectResults);
     }
 
@@ -992,7 +983,6 @@ async function groupAndSelect(value){
         newArray.push('');
         resultArray = resultArray.concat(newArray);
     }
-    console.log(resultArray.toString());
 
     return JSON.stringify({array: resultArray, onlyIndex: 0})
 }
