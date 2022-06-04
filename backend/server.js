@@ -469,7 +469,13 @@ async function selectAndFilter(value){
         if (indexOfCells[tname][cname]){
             let array = await indexClient.db(value.database).collection(tname + "." + cname)
                             .find({}).toArray();
-            array = array.map(a => a._id);
+            if(array != null){
+                console.log(array);
+                array = array.map(a => a._id);
+            }
+            else{
+                array = []
+            }
             return {array: array, onlyIndex: 1};
         }
     }
@@ -531,9 +537,16 @@ async function selectAndFilter(value){
         arrayOfPks = await client.db(value.database).collection(value.table)
                             .find().toArray(); 
     }
-    Object.keys(arrayOfPks).forEach(k => {
-        arrayOfPks[k] = arrayOfPks[k]._id;
-    });
+    if(arrayOfPks[0] != null){
+        console.log(arrayOfPks);
+        Object.keys(arrayOfPks).forEach(k => {
+            
+            arrayOfPks[k] = arrayOfPks[k]._id;
+        });
+    }
+    else {
+        arrayOfPks = [];
+    }
 
     for(f of indexedFilters){
         let newArrayOfPks;
@@ -559,15 +572,20 @@ async function selectAndFilter(value){
                             .find({_id : { $gte: f.value}}).toArray();
                 break;
         }
-
-        Object.keys(newArrayOfPks).forEach(k => {
-            if(uniqueOfCells[f.table][f.field]){
-                newArrayOfPks[k] = newArrayOfPks[k].pk;
-            }
-            else{
-                newArrayOfPks[k] = newArrayOfPks[k].pks;
-            }
-        });
+        
+        if(newArrayOfPks[0] != null){
+            Object.keys(newArrayOfPks).forEach(k => {
+                if(uniqueOfCells[f.table][f.field]){
+                    newArrayOfPks[k] = newArrayOfPks[k].pk;
+                }
+                else{
+                    newArrayOfPks[k] = newArrayOfPks[k].pks;
+                }
+            });
+        }
+        else{
+            newArrayOfPks = [];
+        }
         newArrayOfPks = newArrayOfPks.flat();
 
         arrayOfPks = arrayOfPks.filter(v => newArrayOfPks.includes(v));
@@ -657,8 +675,10 @@ async function joinAndFilter (value) {
         newValue.dontDoIt = true;
         newValue.table = t;
         resultsOfSelects[t] = (await selectAndFilter(newValue)).array;
+        console.log(resultsOfSelects[t]);
         for(let i =0; i < resultsOfSelects[t].length; i++){
             resultsOfSelects[t][i].splice(resultsOfSelects[t][i].length - 1, 1);
+            
         }
     }
     
