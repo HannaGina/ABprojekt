@@ -1,7 +1,6 @@
 import hello.JSONObject;
 import hello.parser.JSONParser;
 import hello.parser.ParseException;
-import javafx.util.Pair;
 
 import javax.swing.*;
 import java.awt.*;

@@ -865,7 +865,7 @@ async function groupAndSelect(value){
                 arrayRowResult.push('');
             }
             selectResults.array = selectResults.array.toString();
-            return JSON.stringify(selectResults);
+            console.log(1 ,selectResults);
         }
 
         let newArray = [];
@@ -983,8 +983,8 @@ async function groupAndSelect(value){
         newArray.push('');
         resultArray = resultArray.concat(newArray);
     }
-
-    return JSON.stringify({array: resultArray, onlyIndex: 0})
+    console.log(resultArray);
+    return JSON.stringify({array: resultArray.toString(), onlyIndex: 0})
 }
 
 
