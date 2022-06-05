@@ -1,0 +1,32 @@
+[
+    {
+        "fk": true,
+        "ftable": "kocsik",
+        "unique": true,
+        "name": "rendszam",
+        "index": true,
+        "pk": true,
+        "type": "string",
+        "fattr": "rendszam"
+    },
+    {
+        "fk": true,
+        "ftable": "kocsikolcsonzo",
+        "unique": false,
+        "name": "kolcsonzo",
+        "index": true,
+        "pk": false,
+        "type": "int",
+        "fattr": "id"
+    },
+    {
+        "fk": false,
+        "ftable": "kocsik",
+        "unique": false,
+        "name": "darum",
+        "index": true,
+        "pk": false,
+        "type": "datetime",
+        "fattr": ""
+    }
+]

@@ -282,7 +282,7 @@ function parameterToType(p, type){
             }
         case 'float':
             if(parseFloat(p) == p){
-                return parseInt(p);
+                return parseFloat(p);
             }
             else{
                 return undefined;
@@ -485,7 +485,7 @@ async function selectAndFilter(value){
     for(let i of Object.keys(value.filters)){
         f = value.filters[i];
         value.filters[i].value = parameterToType(f.value, typeOfCells[f.table][f.field]);
-        if(parameterToType(f.value, typeOfCells[f.table][f.field]) === undefined){
+        if(value.filters[i].value === undefined){
             return {array: `HIBA ${value.filters.indexOf(f)}. feltetel tipusa hibas`, onlyIndex: 0};
         }
         if( (typeOfCells[f.table][f.field] == 'string' || typeOfCells[f.table][f.field] == '' || typeOfCells[f.table][f.field] == 'date')
@@ -537,12 +537,16 @@ async function selectAndFilter(value){
         arrayOfPks = await client.db(value.database).collection(value.table)
                             .find().toArray(); 
     }
+    arrayOfPks2 = [];
     if(arrayOfPks[0] != null){
         console.log(arrayOfPks);
+        
         Object.keys(arrayOfPks).forEach(k => {
-            
-            arrayOfPks[k] = arrayOfPks[k]._id;
+            if(arrayOfPks[k].pks) arrayOfPks2 = arrayOfPks2.concat(arrayOfPks[k].pks);
+            else arrayOfPks2.push(arrayOfPks[k]._id);
         });
+        arrayOfPks = arrayOfPks2;
+        console.log(arrayOfPks);
     }
     else {
         arrayOfPks = [];
@@ -887,12 +891,15 @@ async function groupAndSelect(value){
             selectResults.array = selectResults.array.toString();
             console.log(1 ,selectResults);
         }
-
-        let newArray = [];
-        for(arrayRow of selectResults.array){
-            newArray = newArray.concat(arrayRow);
+        console.log('XD',selectResults);
+        if(value.joins.length == 0) {
+            let newArray = [];
+            for(arrayRow of selectResults.array){
+                newArray = newArray.concat(arrayRow);
+            }
+            selectResults.array = newArray.toString();
         }
-        selectResults.array = newArray.toString();
+        
         return JSON.stringify(selectResults);
     }
 

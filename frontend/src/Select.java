@@ -639,6 +639,7 @@ public class Select extends JPanel {
         answerScroll = new JScrollPane(answerPanel);
         answerScroll.setPreferredSize(new Dimension(400, 400));
         answerScroll.setAutoscrolls(true);
+        System.out.println(answ);
 
         if (answ.get("onlyIndex").toString().equals("1")) //just an index in the projection, and no selection
         {

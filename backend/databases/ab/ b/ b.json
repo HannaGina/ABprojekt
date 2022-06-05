@@ -1,42 +1,42 @@
 [
     {
         "fk": false,
-        "ftable": "",
+        "ftable": "a",
         "unique": true,
         "name": "pk",
         "index": true,
         "pk": true,
         "type": "int",
-        "fattr": ""
+        "fattr": "int"
     },
     {
-        "fk": false,
-        "ftable": "",
-        "unique": true,
-        "name": "unique",
-        "index": true,
+        "fk": true,
+        "ftable": "a",
+        "unique": false,
+        "name": "fk",
+        "index": false,
         "pk": false,
         "type": "int",
-        "fattr": ""
+        "fattr": "int"
     },
     {
         "fk": false,
-        "ftable": "",
+        "ftable": "a",
         "unique": false,
-        "name": "string",
+        "name": "date",
         "index": false,
         "pk": false,
-        "type": "string",
-        "fattr": ""
+        "type": "date",
+        "fattr": "int"
     },
     {
         "fk": false,
-        "ftable": "",
+        "ftable": "a",
         "unique": false,
-        "name": "bit",
+        "name": "datetime",
         "index": false,
         "pk": false,
-        "type": "bit",
-        "fattr": ""
+        "type": "datetime",
+        "fattr": "int"
     }
 ]

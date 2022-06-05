@@ -1,0 +1,32 @@
+[
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": true,
+        "name": "rendszam",
+        "index": true,
+        "pk": true,
+        "type": "string",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "kiadasi_ev",
+        "index": false,
+        "pk": false,
+        "type": "int",
+        "fattr": ""
+    },
+    {
+        "fk": false,
+        "ftable": "",
+        "unique": false,
+        "name": "uj",
+        "index": false,
+        "pk": false,
+        "type": "bit",
+        "fattr": ""
+    }
+]
